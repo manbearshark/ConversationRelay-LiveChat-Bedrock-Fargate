@@ -4,29 +4,32 @@ Description: VPC
 Mappings:
   SubnetConfig:
     VPC:
-      CIDR: "10.0.0.0/16"
+      CIDR: 10.0.0.0/16
     Public1:
-      CIDR: "10.0.0.0/19"
+      CIDR: 10.0.0.0/19
     Public2:
-      CIDR: "10.0.32.0/19"
+      CIDR: 10.0.32.0/19
     Private1:
-      CIDR: "10.0.64.0/19"
+      CIDR: 10.0.64.0/19
     Private2:
-      CIDR: "10.0.96.0/19"
+      CIDR: 10.0.96.0/19
 
 Resources:
-# VPC
+  # VPC
   VPC:
     Type: AWS::EC2::VPC
     Properties:
       EnableDnsSupport: true
       EnableDnsHostnames: true
-      CidrBlock: !FindInMap ["SubnetConfig", "VPC", "CIDR"]
+      CidrBlock: !FindInMap
+        - SubnetConfig
+        - VPC
+        - CIDR
       Tags:
         - Key: Name
           Value: VPC
 
-# VPC Internet Gateway and Attachment
+  # VPC Internet Gateway and Attachment
   VPCInternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -37,32 +40,35 @@ Resources:
   VPCInternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref "VPC"
+      VpcId: !Ref VPC
       InternetGatewayId: !Ref VPCInternetGateway
 
-# Public Subnet
+  # Public Subnet
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone:
-        Fn::Select:
-          - 0
-          - Fn::GetAZs: { Ref: "AWS::Region" }
-      VpcId: !Ref "VPC"
-      CidrBlock: !FindInMap ["SubnetConfig", "Public1", "CIDR"]
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: AWS::Region
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - SubnetConfig
+        - Public1
+        - CIDR
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
           Value: Public Subnet 1
 
   PublicSubnet1RouteTable:
-      Type: AWS::EC2::RouteTable
-      Properties:
-        VpcId: !Ref VPC
-        Tags:
-          - Key: Name
-            Value: Public Subnet 1 Route Table
-  
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Public Subnet 1 Route Table
+
   PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -72,8 +78,7 @@ Resources:
   PublicSubnet1DefaultRoute:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId:
-        Ref: PublicSubnet1RouteTable
+      RouteTableId: !Ref PublicSubnet1RouteTable
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref VPCInternetGateway
     DependsOn:
@@ -88,8 +93,7 @@ Resources:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt PublicSubnet1EIP.AllocationId
-      SubnetId:
-        Ref: PublicSubnet1
+      SubnetId: !Ref PublicSubnet1
       Tags:
         - Key: Name
           Value: Public Subnet 1 Nat Gateway
@@ -97,12 +101,15 @@ Resources:
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone:
-        Fn::Select:
-          - 1
-          - Fn::GetAZs: { Ref: "AWS::Region" }
-      VpcId: !Ref "VPC"
-      CidrBlock: !FindInMap ["SubnetConfig", "Public2", "CIDR"]
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs
+          Ref: AWS::Region
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - SubnetConfig
+        - Public2
+        - CIDR
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -111,8 +118,7 @@ Resources:
   PublicSubnet2RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId:
-        Ref: "VPC"
+      VpcId: !Ref VPC
       Tags:
         - Key: Name
           Value: Public Subnet 2 Route Table
@@ -126,8 +132,7 @@ Resources:
   PublicSubnet2DefaultRoute:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId:
-        Ref: PublicSubnet2RouteTable
+      RouteTableId: !Ref PublicSubnet2RouteTable
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref VPCInternetGateway
     DependsOn:
@@ -147,16 +152,19 @@ Resources:
         - Key: Name
           Value: Public Subnet 2 Nat Gateway
 
-# Private Subnets
+  # Private Subnets
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone:
-         Fn::Select:
-         - 0
-         - Fn::GetAZs: {Ref: 'AWS::Region'}
-      VpcId: !Ref 'VPC'
-      CidrBlock: !FindInMap ["SubnetConfig", "Private1", "CIDR"]
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: AWS::Region
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - SubnetConfig
+        - Private1
+        - CIDR
       Tags:
         - Key: Name
           Value: Subnet-One
@@ -185,12 +193,15 @@ Resources:
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
-      AvailabilityZone:
-         Fn::Select:
-         - 1
-         - Fn::GetAZs: {Ref: 'AWS::Region'}
-      VpcId: !Ref 'VPC'
-      CidrBlock: !FindInMap ["SubnetConfig", "Private2", "CIDR"]
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs
+          Ref: AWS::Region
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - SubnetConfig
+        - Private2
+        - CIDR
       Tags:
         - Key: Name
           Value: Subnet-Two
@@ -208,15 +219,15 @@ Resources:
     Properties:
       RouteTableId: !Ref Private2RouteTable
       SubnetId: !Ref PrivateSubnet2
-  
+
   PrivateSubnet2DefaultRoute:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref Private2RouteTable
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref PublicSubnet2NatGateway
-      
-# Load Balancer Configuration
+
+  # Load Balancer Configuration
   PublicLoadBalancer:
     DependsOn: VPCInternetGateway
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -235,7 +246,7 @@ Resources:
     Properties:
       #  Check if your application is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
       HealthCheckIntervalSeconds: 10 # Default is 30.
-      HealthyThresholdCount: 2       # Default is 5.
+      HealthyThresholdCount: 2 # Default is 5.
       HealthCheckTimeoutSeconds: 5
       Name: public-tg
       VpcId: !Ref VPC
@@ -248,7 +259,7 @@ Resources:
       IpAddressType: ipv4
 
   PublicLBListener:
-    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: forward
@@ -262,9 +273,9 @@ Resources:
     Properties:
       GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupEgress:
-        - CidrIp: "0.0.0.0/0"
+        - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
-          IpProtocol: "-1"
+          IpProtocol: '-1'
       SecurityGroupIngress:
         # Allow traffic from services on port 3000
         - CidrIp: 0.0.0.0/0
@@ -284,13 +295,68 @@ Resources:
       ToPort: 80
       GroupId: !Ref PublicHTTPSecurityGroup
 
+  # VPC Endpoints for Bedrock
+  VPCEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow TLS for VPC Endpoint
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: twilio-cr-br-endpoint-security-group
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: security group for bedrock workload in private subnets
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: twilio-cr-br-security-group
+
+  EndpointSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      GroupId: !Ref VPCEndpointSecurityGroup
+      SourceSecurityGroupId: !Ref SecurityGroup
+
+  VPCEndpointBedrockRuntime:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Ref AWS::AccountId
+            Action:
+              - bedrock:*
+            Resource:
+              - arn:aws:bedrock:*::foundation-model/*
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+      SecurityGroupIds:
+        - !Ref VPCEndpointSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.bedrock-runtime
+      VpcId: !Ref VPC
+
+# Outputs
+
 Outputs:
   PublicLBFQDN:
     Value: !Join
-      - ""
-      - - "http://"
+      - ''
+      - - http://
         - !GetAtt PublicLoadBalancer.DNSName
-        - "/"
+        - /
   VPCID:
     Value: !Ref VPC
   PublicSubnet1:

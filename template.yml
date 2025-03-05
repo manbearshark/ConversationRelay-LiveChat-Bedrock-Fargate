@@ -110,6 +110,25 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+ 
+  #creating an IAM role using IAM managed policy AmazonBedrockFullAccess with the service bedrock
+  AmazonBedrockFullAccess:
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Service: 
+                - "bedrock.amazonaws.com"
+              AWS:
+                - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: 
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+      RoleName: "AmazonBedrockFullAccess"
 
   ECSTaskRole:
     Type: AWS::IAM::Role
@@ -126,6 +145,8 @@ Resources:
             StringEquals:
               aws:SourceAccount: !Ref AWS::AccountId
       Path: /
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
 
 Outputs:
   ClusterName:
