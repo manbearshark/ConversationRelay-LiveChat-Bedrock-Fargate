@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS Fargate with VPC, ALB, ECR, Bedrock, PrivateLink, and Twilio Conversation Relay
+
+Parameters:
+
+  ECRRepoURL:
+    Description: The URL of the ECR repository
+    Type: String
+    Default: 971461683291.dkr.ecr.us-west-2.amazonaws.com
+
+  ECRImageName:
+    Description: The name of the ECR image for the service deployment  
+    Type: String
+    Default: twilio-conversation-relay-bedrock-services
+
+  ImageTag:
+    Description: The ECR image tag - corresponds to the version of the image     
+    Type: String
+    Default: latest
+
+Globals:
+  Function:
+    Timeout: 3
+    MemorySize: 128
+
+Resources:  
+  VPC:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./vpc.yml
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties: 
+      CapacityProviders: 
+        - FARGATE
+  
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: "twilio-conversation-relay-bedrock-service"
+      Cluster: !Ref Cluster
+      LaunchType: FARGATE
+      EnableExecuteCommand: true
+      HealthCheckGracePeriodSeconds: 5
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: [!GetAtt "VPC.Outputs.PublicSubnet1", !GetAtt VPC.Outputs.PublicSubnet2]
+          SecurityGroups: [!GetAtt VPC.Outputs.SG]
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+      DesiredCount: 1
+      TaskDefinition: !Ref "TaskDefinition"
+      LoadBalancers:
+        - ContainerName: "twilio-conversation-relay-bedrock-service"
+          ContainerPort: 3000
+          TargetGroupArn: !GetAtt VPC.Outputs.LB
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: twilio-conversation-relay-service 
+      Cpu: 1024
+      Memory: 8192
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !Ref ECSTaskRole
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+      ContainerDefinitions:
+        - Name: twilio-conversation-relay-bedrock-service
+          Cpu: 1024
+          Memory: 8192
+          Image: 971461683291.dkr.ecr.us-west-2.amazonaws.com/twilio-conversation-relay-bedrock-services:latest
+          PortMappings:
+            - ContainerPort: 3000
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              mode: non-blocking
+              max-buffer-size: 25m
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: containerlog
+  
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /fargatelogs
+
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+          Condition:
+            ArnLike:
+              aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
+            StringEquals:
+              aws:SourceAccount: !Ref AWS::AccountId
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+          Condition:
+            ArnLike:
+              aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
+            StringEquals:
+              aws:SourceAccount: !Ref AWS::AccountId
+      Path: /
+
+Outputs:
+  ClusterName:
+    Description: Twilio ConversationRelay Service 
+    Value: !Ref Cluster
+  ServiceName:
+    Description: Amazon ECS Service Name
+    Value: !GetAtt Service.Name
+  FQDN:
+    Description: URL for your application
+    Value: !GetAtt VPC.Outputs.PublicLBFQDN
