@@ -1,12 +1,12 @@
-FROM node:lts-alpine
+FROM node:latest AS node
 
-ENV NODE_ENV=production
+ENV NODE_ENV=debug
 
 WORKDIR /usr/src/app
 
-COPY ["package.json", "package-lock.json*", "./"]
+COPY package*.json index.js ./
 
-RUN npm install --production --silent && mv node_modules ../
+RUN npm install
 
 COPY . .
 

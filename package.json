@@ -1,7 +1,8 @@
 {
     "name": "hello-world",
     "version": "1.0.0",
-    "description": "A simple hello-world application",
+    "description": "A simple hello-world application with Amazon Bedrock",
+    "type": "module",
     "main": "index.js",
     "scripts": {
       "start": "node index.js",
@@ -9,23 +10,13 @@
       "lint": "eslint . --ext .js"
     },
     "jest-junit": {
-      "outputDirectory": "reports",
-      "outputName": "jest-junit.xml",
-      "ancestorSeparator": " › ",
-      "uniqueOutputName": "false",
-      "suiteNameTemplate": "{filepath}",
-      "classNameTemplate": "{classname}",
-      "titleTemplate": "{title}"
     },
-    "author": "Jessica Deen",
+    "author": "George Wolf",
     "license": "MIT",
     "dependencies": {
-      "express": "^4.18.2"
+      "express": "^4.21.2",
+      "@aws-sdk/client-bedrock-runtime": "3.758.0"
     },
     "devDependencies": {
-      "eslint": "^8.51.0",
-      "jest": "^29.7.0",
-      "jest-junit": "^16.0.0",
-      "supertest": "^6.3.3"
     }
   }

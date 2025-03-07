@@ -32,7 +32,10 @@ Resources:
 
   Cluster:
     Type: AWS::ECS::Cluster
-    Properties: 
+    Properties:
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
       CapacityProviders: 
         - FARGATE
   
@@ -52,6 +55,9 @@ Resources:
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 50
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
       DesiredCount: 1
       TaskDefinition: !Ref "TaskDefinition"
       LoadBalancers:
@@ -77,6 +83,7 @@ Resources:
           Cpu: 1024
           Memory: 8192
           Image: 971461683291.dkr.ecr.us-west-2.amazonaws.com/twilio-conversation-relay-bedrock-services:latest
+          Essential: true
           PortMappings:
             - ContainerPort: 3000
           LogConfiguration:
