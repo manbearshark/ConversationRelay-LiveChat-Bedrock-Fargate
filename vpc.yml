@@ -297,7 +297,7 @@ Resources:
       ToPort: 80
       GroupId: !Ref PublicHTTPSecurityGroup
 
-  # # VPC Endpoints for Bedrock
+  # VPC Endpoints for Bedrock
   # VPCEndpointSecurityGroup:
   #   Type: AWS::EC2::SecurityGroup
   #   Properties:
@@ -338,7 +338,7 @@ Resources:
   #           Action:
   #             - bedrock:*
   #           Resource:
-  #             - arn:aws:bedrock:*::foundation-model/*
+  #             - arn:aws:bedrock:*
   #     VpcEndpointType: Interface
   #     PrivateDnsEnabled: true
   #     SubnetIds:
@@ -347,6 +347,7 @@ Resources:
 
   #     SecurityGroupIds:
   #       - !Ref VPCEndpointSecurityGroup
+  #       - !Ref PublicHTTPSecurityGroup
   #     ServiceName: !Sub com.amazonaws.${AWS::Region}.bedrock-runtime
   #     VpcId: !Ref VPC
 
