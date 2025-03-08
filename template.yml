@@ -25,6 +25,16 @@ Globals:
     MemorySize: 128
 
 Resources:  
+  # Inference Profile for Claude Sonnet
+  # This will track usage for the model
+  BedrockApplicationInferenceProfile:
+    Type: AWS::Bedrock::ApplicationInferenceProfile
+    Properties:
+      ModelSource:
+        CopyFrom: !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0
+      InferenceProfileName: TwilioConversationRelayInferenceProfile
+      Description: Inference profile used to track usage for the Twilio Conversation Relay service
+
   VPC:
     Type: AWS::Serverless::Application
     Properties:
@@ -82,10 +92,23 @@ Resources:
         - Name: twilio-conversation-relay-bedrock-service
           Cpu: 1024
           Memory: 8192
-          Image: 971461683291.dkr.ecr.us-west-2.amazonaws.com/twilio-conversation-relay-bedrock-services:latest
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/twilio-conversation-relay-bedrock-services:latest
           Essential: true
           PortMappings:
             - ContainerPort: 3000
+          Environment:
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: INFERENCE_PROFILE_ARN
+              Value: !GetAtt BedrockApplicationInferenceProfile.InferenceProfileArn
+            # - Name: NODE_ENV
+            #   Value: !Ref Environment
+            # - Name: DB_HOST
+            #   Value: !Sub "{{resolve:ssm:${DBHostParameter}:1}}"
+            # - Name: DB_USER
+            #   Value: !Sub "{{resolve:ssm:${DBUserParameter}:1}}"
+            # - Name: DB_PASSWORD
+            #   Value: !Sub "{{resolve:ssm:${DBPasswordParameter}:1}}"
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -114,6 +137,13 @@ Resources:
               aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
             StringEquals:
               aws:SourceAccount: !Ref AWS::AccountId
+        # - Effect: Allow
+        #   Action:
+        #     - ssm:GetParameters
+        #   Resource: 
+        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBHostParameter}"
+        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBUserParameter}"
+        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBPasswordParameter}"
       Path: /
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
@@ -151,6 +181,13 @@ Resources:
               aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
             StringEquals:
               aws:SourceAccount: !Ref AWS::AccountId
+        # - Effect: Allow
+        #   Action:
+        #     - ssm:GetParameters
+        #   Resource: 
+        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBHostParameter}"
+        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBUserParameter}"
+        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBPasswordParameter}"
       Path: /
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
@@ -165,3 +202,6 @@ Outputs:
   FQDN:
     Description: URL for your application
     Value: !GetAtt VPC.Outputs.PublicLBFQDN
+  InferenceProfile:
+    Description: Inference Profile for Claude Sonnet
+    Value: !GetAtt BedrockApplicationInferenceProfile.InferenceProfileArn

@@ -8,19 +8,18 @@ import express from "express";
 const app = express();
 const port = 3000;
 
-const region = "us-west-2";
-
 // Create a Bedrock Runtime client in the AWS Region you want to use and this service is running in.
 let client;
+const inferenceProfileArn = process.env.INFERENCE_PROFILE_ARN;
+const region = process.env.AWS_REGION;
+
 try {
   client = new BedrockRuntimeClient({ region });
+  console.log("Client");
+  console.log(`Inference Profile ARN: ${inferenceProfileArn}`);
 } catch (err) {
   console.error(err);
 }
-
-// Set the model ID
-// MAKE SURE YOU HAVE ENABLED ACCESS TO THE MODEL HERE IN THE REGION SPECIFIED
-const modelId = "anthropic.claude-3-7-sonnet-20250219-v1:0";
 
 app.get('/', async (req, res) => {
   try {
@@ -36,12 +35,12 @@ app.get('/', async (req, res) => {
 
     // Create a command with the model ID, the message, and a basic configuration.
     const command = new ConverseCommand({
-      modelId,
+      modelId: inferenceProfileArn,
       messages: conversation,
       inferenceConfig: { maxTokens: 512, temperature: 0.5, topP: 0.9 },
     });
     const response = await client.send(command);
-    const answer = response.output.content[0].text;
+    const answer = response;
     console.log(`Got answer: ${answer}`);
 
     res.send(answer);
