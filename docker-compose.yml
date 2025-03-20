@@ -1,0 +1,24 @@
+services:
+  sendgrid-bedrock: 
+    build: .
+    image: sendgrid-bedrock-local
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - AWS_PROFILE
+      - AWS_REGION
+      - INFERENCE_PROFILE_ARN=arn:aws:bedrock:us-west-2:971461683291:application-inference-profile/sc5iyyuax8mb
+      - AWS_REGION=us-west-2
+    secrets:
+      - source: aws
+        target: /home/node/.aws
+        uid: "1000"
+        gid: "1000"
+        mode: 0700
+    ports:
+      - "3000:3000"
+
+secrets:
+  aws:
+    file: "~/.aws"
