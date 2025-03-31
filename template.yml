@@ -35,6 +35,7 @@ Resources:
       InferenceProfileName: TwilioConversationRelayInferenceProfile
       Description: Inference profile used to track usage for the Twilio Conversation Relay service
 
+  # DynamoDB Table used to track conversations
   PrimaryDynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -239,6 +240,9 @@ Resources:
         - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
 
 Outputs:
+  DynamoDBTable:
+    Description: DynamoDB Table Name
+    Value: !Ref PrimaryDynamoDBTable
   ClusterName:
     Description: Twilio ConversationRelay Service 
     Value: !Ref Cluster
