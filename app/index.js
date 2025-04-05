@@ -19,8 +19,6 @@ app.use(bodyParser.urlencoded({ extended: true })) // for parsing application/x-
 app.post('/call-setup-restaurant-order', async (req, res) => {
   try {
     // 1) Parse BODY of request to extract Call Details
-    // let bufferObj = Buffer.from(req.body, "base64");    
-    // let twilio_body = querystring.decode(bufferObj.toString("utf8"));
     // 2) Generate a UUID for this call session
     let callSessionId = uuidv4();
     console.log("Twilio Body: ", JSON.stringify(req.body));
