@@ -148,6 +148,12 @@ Resources:
               Value: !Ref AWS::Region
             - Name: INFERENCE_PROFILE_ARN
               Value: !GetAtt BedrockApplicationInferenceProfile.InferenceProfileArn
+            - Name: STACK_USE_CASE
+              Value: restaurantOrderingUseCase
+            - Name: WS_URL
+              Value: !GetAtt VPC.Outputs.PublicLBFQDN
+            - Name: TABLE_NAME
+              Value: !Ref PrimaryDynamoDBTable
             # - Name: NODE_ENV
             #   Value: !Ref Environment
             # - Name: DB_HOST

@@ -34,7 +34,7 @@ app.post('/call-setup-restaurant-order', async (req, res) => {
   }
 });
 
-// Healthscheck endpoint for load balancers
+// Health check endpoint for load balancers
 app.get('/health', (req, res) => {
   // Health check endpoint
   res.send('Healthy');
@@ -54,7 +54,14 @@ wsServer.on('connection', (socket, request, head, callSessionId) => {
   console.log('Client connected headers: ', JSON.stringify(head));
 
   socket.on('message', async (message, callSessionId) => {
-
+    console.log('Received message:', message);
+  });
+  socket.on('close', () => {
+    console.log('Client disconnected');
+  }
+  );
+  socket.on('error', (error) => {
+    console.error('WebSocket error:', error);
   });
 });
 
