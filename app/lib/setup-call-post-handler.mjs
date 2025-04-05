@@ -122,7 +122,7 @@ export const setupCallPostHandler = async (twilio_body, requestId) => {
         // This requestId param allows the call set up to be connected to
         // the WebSocket session (connectionId)
         
-        let ws_url = `${process.env.WS_URL}?cid=${requestId}`;
+        let ws_url = `${process.env.WS_URL}?requestId=${requestId}`;
         
         // 6) Generate Twiml to spin up ConversationRelay connection
 

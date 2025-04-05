@@ -3,8 +3,8 @@ import bodyParser from "body-parser";
 import { WebSocketServer } from "ws";
 import { setupCallPostHandler } from './lib/setup-call-post-handler.mjs';
 import { onConnectWebsocketHandler } from './lib/onconnect-websocket-handler.mjs';
-import querystring from 'node:querystring';
 import { v4 as uuidv4 } from 'uuid';
+import url from 'url';
 
 const app = express();
 const port = 3000;
@@ -43,16 +43,20 @@ app.get('/health', (req, res) => {
 // WebSocket handlers - this server is shared with the HTTP server
 server.on('upgrade', (request, socket, head) => {
   wsServer.handleUpgrade(request, socket, head, (socket) => {
-    // Generate a unique call session ID for the WebSocket connection
-    const callSessionId = uuidv4();
-    wsServer.emit('connection', socket, request, head, callSessionId);
+    // Get the call session ID for the WebSocket connection
+    const URLparams = url.parse(request.url, true).query;
+    if(URLparams.requestId) {
+      wsServer.emit('connection', socket, request, head, URLparams.requestId);
+    }
+    else {
+      console.error('No requestId found in the request URL');
+      socket.destroy();
+    }
   })
 });
 
+// Handler funcitons for post WS connection
 wsServer.on('connection', (socket, request, head, callSessionId) => {
-  console.log('Client connected request: ', JSON.stringify(request));
-  console.log('Client connected headers: ', JSON.stringify(head));
-
   socket.on('message', async (message, callSessionId) => {
     console.log('Received message:', message);
   });
@@ -64,25 +68,3 @@ wsServer.on('connection', (socket, request, head, callSessionId) => {
     console.error('WebSocket error:', error);
   });
 });
-
-    // try {
-    //   const userMessage = JSON.parse(message).message;
-    //   const conversation = [
-    //     {
-    //       role: "user",
-    //       content: [{ text: userMessage }],
-    //     },
-    //   ];
-    //   console.log(`Sending message: ${userMessage}`);
-
-    //   // Add onconnect call here...
-
-    //   socket.send(JSON.stringify({ message: answer }));
-    // } catch (error) {
-    //   console.error(error);
-    //   socket.send(
-    //     JSON.stringify({
-    //       message: "An error occurred while processing your request.",
-    //     })
-    //   );
-    // }
