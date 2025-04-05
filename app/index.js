@@ -13,6 +13,7 @@ const server = app.listen(port, () => {
   console.log(`App is ready.`);
 });
 
+// Twilio sends form url endcoded data
 app.use(bodyParser.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
 
 // Twilio will send a POST request to this endpoint when estabilishing a call
@@ -42,6 +43,7 @@ app.get('/health', (req, res) => {
 // WebSocket handlers - this server is shared with the HTTP server
 server.on('upgrade', (request, socket, head) => {
   wsServer.handleUpgrade(request, socket, head, (socket) => {
+    // Generate a unique call session ID for the WebSocket connection
     const callSessionId = uuidv4();
     wsServer.emit('connection', socket, request, head, callSessionId);
   })
