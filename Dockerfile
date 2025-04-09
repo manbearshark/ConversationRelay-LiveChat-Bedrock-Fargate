@@ -4,7 +4,7 @@ ENV NODE_ENV=debug
 
 WORKDIR /usr/src/app
 
-COPY package*.json index.js ./
+COPY ./app/package*.json ./app/index.js ./app ./
 
 RUN npm install
 

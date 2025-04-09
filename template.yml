@@ -35,10 +35,57 @@ Resources:
       InferenceProfileName: TwilioConversationRelayInferenceProfile
       Description: Inference profile used to track usage for the Twilio Conversation Relay service
 
+  # DynamoDB Table used to track conversations
+  PrimaryDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TimeToLiveSpecification:
+        AttributeName: expireAt
+        Enabled: true
+      TableName: !Sub "${AWS::StackName}-ConversationRelayAppDatabase"
+      BillingMode: 'PAY_PER_REQUEST'
+      AttributeDefinitions:
+        -
+          AttributeName: "pk"
+          AttributeType: "S"
+        -
+          AttributeName: "sk"
+          AttributeType: "S"
+        -
+          AttributeName: "pk1"
+          AttributeType: "S"
+        -
+          AttributeName: "sk1"
+          AttributeType: "S"
+      KeySchema:
+        -
+          AttributeName: "pk"
+          KeyType: "HASH"
+        -
+          AttributeName: "sk"
+          KeyType: "RANGE"
+      GlobalSecondaryIndexes:
+        -
+          IndexName: "index-1-full"
+          KeySchema:
+            -
+              AttributeName: "pk1"
+              KeyType: "HASH"
+            -
+              AttributeName: "sk1"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+
+  # VPC and Security Group
   VPC:
     Type: AWS::Serverless::Application
     Properties:
       Location: ./vpc.yml
+
+  # Cluster and Service for Fargate
+  # This will create a cluster and service for the Twilio Conversation Relay service
+  # The service will be deployed in the VPC created above
 
   Cluster:
     Type: AWS::ECS::Cluster
@@ -101,6 +148,12 @@ Resources:
               Value: !Ref AWS::Region
             - Name: INFERENCE_PROFILE_ARN
               Value: !GetAtt BedrockApplicationInferenceProfile.InferenceProfileArn
+            - Name: STACK_USE_CASE
+              Value: restaurantOrderingUseCase
+            - Name: WS_URL
+              Value: !GetAtt VPC.Outputs.PublicLBWSURL
+            - Name: TABLE_NAME
+              Value: !Ref PrimaryDynamoDBTable
             # - Name: NODE_ENV
             #   Value: !Ref Environment
             # - Name: DB_HOST
@@ -181,18 +234,28 @@ Resources:
               aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
             StringEquals:
               aws:SourceAccount: !Ref AWS::AccountId
-        # - Effect: Allow
-        #   Action:
-        #     - ssm:GetParameters
-        #   Resource: 
-        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBHostParameter}"
-        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBUserParameter}"
-        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBPasswordParameter}"
       Path: /
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+  
+  ECSTaskPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "ECSTaskPolicy"
+      Roles:
+        - !Ref ECSTaskRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "dynamodb:*"
+            Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AWS::StackName}-ConversationRelayAppDatabase"
 
 Outputs:
+  DynamoDBTable:
+    Description: DynamoDB Table Name
+    Value: !Ref PrimaryDynamoDBTable
   ClusterName:
     Description: Twilio ConversationRelay Service 
     Value: !Ref Cluster
@@ -202,6 +265,9 @@ Outputs:
   FQDN:
     Description: URL for your application
     Value: !GetAtt VPC.Outputs.PublicLBFQDN
+  WSURL:
+    Description: WebSocket URL for your application
+    Value: !GetAtt VPC.Outputs.PublicLBWSURL
   InferenceProfile:
     Description: Inference Profile for Claude Sonnet
     Value: !GetAtt BedrockApplicationInferenceProfile.InferenceProfileArn

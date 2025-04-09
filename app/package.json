@@ -1,7 +1,7 @@
 {
-    "name": "hello-world",
+    "name": "conversation-relay-bedrock-customer-service-live-voice",
     "version": "1.0.0",
-    "description": "A simple hello-world application with Amazon Bedrock",
+    "description": "A simple websockets application with Amazon Bedrock and Twilio Conversation Relay.",
     "type": "module",
     "main": "index.js",
     "scripts": {
@@ -16,7 +16,11 @@
     "dependencies": {
       "express": "^4.21.2",
       "ws": "^8.0.0",
-      "@aws-sdk/client-bedrock-runtime": "^3.758.0"
+      "@aws-sdk/client-bedrock-runtime": "^3.758.0",
+      "@aws-sdk/client-dynamodb": "^3.0.0",
+      "@aws-sdk/lib-dynamodb": "^3.0.0",
+      "@aws-sdk/client-bedrock-runtime": "^3.778.0",
+      "@aws-sdk/client-apigatewaymanagementapi": "^3.777.0"
     },
     "devDependencies": {
     }

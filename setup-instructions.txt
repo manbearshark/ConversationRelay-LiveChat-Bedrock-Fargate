@@ -1,0 +1,30 @@
+====================================================
+1) DEPLOY TEMPLATE
+====================================================
+Run `sam build` from this directory every time before deploying.
+
+Run 
+sam deploy --guided --stack-name CR-AWS-BEDROCK --template template.yaml --profile $(cat ./aws-profile.profile) --capabilities CAPABILITY_NAMED_IAM
+
+* The first time you deploy, add `--guided` (`sam deploy --guided --stack-name...`) to the above command to generate a configuration file. All subsequent commands do not need the --guided.
+
+====================================================
+2) LINK AWS REST API ENDPOINT TO TWILIO
+====================================================
+Take Output from the stack called "TwimlAPI" and assign it to the Webhook for Voice handler for their desired phone number.
+
+====================================================
+3) DATA LOADING
+====================================================
+aws dynamodb put-item --table-name twilio-conr-bedr-ConversationRelayAppDatabase --item "$(node ./configuration/dynamo-loaders/restaurantOrderingUseCase.js | cat)"
+
+====================================================
+4) ADD A PROFILE
+First, edit this file [ ./configuration/dynamo-loaders/user-profile-example.json ]
+with your information. The primary key is the phone number in E164
+format! 
+====================================================
+aws dynamodb put-item --table-name twilio-conr-bedr-ConversationRelayAppDatabase --item "$(node ./configuration/user-profile.js | cat)"
+
+
+twilio-conr-bedr-ConversationRelayAppDatabase
