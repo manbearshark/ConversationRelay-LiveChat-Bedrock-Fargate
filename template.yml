@@ -151,7 +151,7 @@ Resources:
             - Name: STACK_USE_CASE
               Value: restaurantOrderingUseCase
             - Name: WS_URL
-              Value: !GetAtt VPC.Outputs.PublicLBFQDN
+              Value: !GetAtt VPC.Outputs.PublicLBWSURL
             - Name: TABLE_NAME
               Value: !Ref PrimaryDynamoDBTable
             # - Name: NODE_ENV
@@ -234,16 +234,23 @@ Resources:
               aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
             StringEquals:
               aws:SourceAccount: !Ref AWS::AccountId
-        # - Effect: Allow
-        #   Action:
-        #     - ssm:GetParameters
-        #   Resource: 
-        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBHostParameter}"
-        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBUserParameter}"
-        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBPasswordParameter}"
       Path: /
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+  
+  ECSTaskPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "ECSTaskPolicy"
+      Roles:
+        - !Ref ECSTaskRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "dynamodb:*"
+            Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AWS::StackName}-ConversationRelayAppDatabase"
 
 Outputs:
   DynamoDBTable:
@@ -258,6 +265,9 @@ Outputs:
   FQDN:
     Description: URL for your application
     Value: !GetAtt VPC.Outputs.PublicLBFQDN
+  WSURL:
+    Description: WebSocket URL for your application
+    Value: !GetAtt VPC.Outputs.PublicLBWSURL
   InferenceProfile:
     Description: Inference Profile for Claude Sonnet
     Value: !GetAtt BedrockApplicationInferenceProfile.InferenceProfileArn

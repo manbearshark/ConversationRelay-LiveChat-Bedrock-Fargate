@@ -360,6 +360,11 @@ Outputs:
       - - http://
         - !GetAtt PublicLoadBalancer.DNSName
         - /
+  PublicLBWSURL:
+    Value: !Join
+      - ''
+      - - ws://
+        - !GetAtt PublicLoadBalancer.DNSName
   VPCID:
     Value: !Ref VPC
   PublicSubnet1:

@@ -139,7 +139,7 @@ export const setupCallPostHandler = async (twilio_body, requestId) => {
     </Connect>
 </Response>`;
         
-        //console.log("twiml ==> ", twiml);
+        console.log("twiml ==> ", twiml);
         return twiml;
     } catch (err) {
         console.log("Error writing session details for call => ", err);                

@@ -50,21 +50,40 @@ server.on('upgrade', (request, socket, head) => {
     }
     else {
       console.error('No requestId found in the request URL');
-      socket.destroy();
+      socket.terminate();
     }
   })
 });
 
-// Handler funcitons for post WS connection
+// TODO: Add ping handler for WebSocket connections - per https://github.com/websockets/ws?tab=readme-ov-file#other-examples
+
+function heartbeat() {
+  this.isAlive = true;
+}
+
+const interval = setInterval(function ping() {
+  wsServer.clients.forEach(function each(ws) {
+    if (ws.isAlive === false) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+// Handler functions for post WS connection
 wsServer.on('connection', (socket, request, head, callSessionId) => {
+  socket.isAlive = true;
   socket.on('message', async (message, callSessionId) => {
     console.log('Received message:', message);
   });
-  socket.on('close', () => {
-    console.log('Client disconnected');
-  }
-  );
   socket.on('error', (error) => {
     console.error('WebSocket error:', error);
   });
+  socket.on('close', () => {
+    console.log('Client disconnected');
+    clearInterval(interval);
+  });
+  socket.on('pong', heartbeat);
 });
+
+
+
