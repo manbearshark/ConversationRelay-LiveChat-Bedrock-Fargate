@@ -287,6 +287,118 @@ Resources:
           ToPort: 3000
       VpcId: !Ref VPC
 
+  # API GW HTTP API Endpoint
+  APIGateway:
+    Type: 'AWS::ApiGatewayV2::Api'
+    Properties:
+      Name: APIGatewayHTTPS
+      ProtocolType: HTTP
+  APIGWAnyProxyListener:
+    Type: 'AWS::ApiGatewayV2::Integration'
+    Properties:
+      ApiId: !Ref APIGateway
+      IntegrationType: HTTP_PROXY
+      ConnectionId: !Ref PrivateVPCLink
+      ConnectionType: VPC_LINK
+      IntegrationMethod: ANY
+      IntegrationUri: !Ref PublicLBListener
+      PayloadFormatVersion: '1.0'
+  APIGWAnyProxy:
+    Type: 'AWS::ApiGatewayV2::Route'
+    Properties:
+      ApiId: !Ref APIGateway
+      RouteKey: 'ANY /{proxy+}'
+      AuthorizationType: NONE
+      Target: !Join 
+        - ''
+        - - integrations/
+          - !Ref APIGWAnyProxyListener
+
+  # API GW WebSocket API Endpoint
+  APIWSGateway:
+    Type: 'AWS::ApiGatewayV2::Api'
+    Properties:
+      Name: APIGatewayWebSocket
+      ProtocolType: WEBSOCKET
+  APIGWAnyWSProxyListener:
+    Type: 'AWS::ApiGatewayV2::Integration'
+    Properties:
+      ApiId: !Ref APIWSGateway
+      IntegrationType: HTTP_PROXY
+      ConnectionId: !Ref PrivateVPCLink
+      ConnectionType: VPC_LINK
+      IntegrationMethod: ANY
+      IntegrationUri: !Ref PublicLBListener
+      PayloadFormatVersion: '1.0'
+  APIGWAnyWSProxy:
+    Type: 'AWS::ApiGatewayV2::Route'
+    Properties:
+      ApiId: !Ref APIWSGateway
+      RouteKey: 'ANY /{proxy+}'
+      RouteResponseSelectionExpression: $default
+      AuthorizationType: NONE
+      Target: !Join 
+        - ''
+        - - integrations/
+          - !Ref APIGWAnyWSProxyListener
+
+  # VPC Link - Replaces Internet GW
+  PrivateVPCLink:
+    Type: 'AWS::ApiGatewayV2::VpcLink'
+    Properties:
+      Name: PrivateVPCLink
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroupIds: []
+
+  # HTTP API Log Group + Stage
+  APIGWStageLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      RetentionInDays: 30 
+    UpdateReplacePolicy: Delete 
+    DeletionPolicy: Delete 
+
+  StageWithLogging:
+    Type: 'AWS::ApiGatewayV2::Stage'
+    Properties:
+      ApiId: !Ref APIGateway
+      StageName: $default
+      AccessLogSettings:
+        DestinationArn: !GetAtt 
+          - APIGWStageLogGroup
+          - Arn
+        Format: >-
+          $context.identity.sourceIp - - [$context.requestTime]
+          "$context.httpMethod $context.routeKey $context.protocol"
+          $context.status $context.responseLength $context.requestId
+      AutoDeploy: true
+
+  # WS API Log Group + Stage
+  APIGWWSStageLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      RetentionInDays: 30 
+    UpdateReplacePolicy: Delete 
+    DeletionPolicy: Delete 
+
+  WSStageWithLogging:
+    Type: 'AWS::ApiGatewayV2::Stage'
+    Properties:
+      ApiId: !Ref APIWSGateway
+      StageName: $default
+      AccessLogSettings:
+        DestinationArn: !GetAtt 
+          - APIGWWSStageLogGroup
+          - Arn
+        Format: >-
+          $context.identity.sourceIp - - [$context.requestTime]
+          "$context.httpMethod $context.routeKey $context.protocol"
+          $context.status $context.responseLength $context.requestId
+      AutoDeploy: true
+
+
   ApplicationLBSecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -351,8 +463,7 @@ Resources:
   #     ServiceName: !Sub com.amazonaws.${AWS::Region}.bedrock-runtime
   #     VpcId: !Ref VPC
 
-# Outputs
-
+# Stack Outputs
 Outputs:
   PublicLBFQDN:
     Value: !Join
@@ -365,6 +476,11 @@ Outputs:
       - ''
       - - ws://
         - !GetAtt PublicLoadBalancer.DNSName
+  APIinvokeURL:
+    Description: Public API invocation endpoint URL
+    Value: !GetAtt 
+      - APIGateway
+      - ApiEndpoint
   VPCID:
     Value: !Ref VPC
   PublicSubnet1:
