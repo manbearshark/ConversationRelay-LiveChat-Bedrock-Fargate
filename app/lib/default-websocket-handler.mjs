@@ -18,6 +18,10 @@ export const defaultWebsocketHandler = async (connectionId, ws_domain_name, sock
             return;
         }
 
+        if (body?.type === "error") {
+            console.error("Error event received from ConversationRelay server: ", body.description);
+        }
+
         // Text prompts and dtmf events sent via WebSockets 
         // and tool call completion events follow the same steps and call the LLM
         if (body?.type === "prompt" || body?.type === "dtmf") {                        

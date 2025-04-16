@@ -11,9 +11,6 @@
 import { BedrockRuntimeClient, ConverseStreamCommand } from "@aws-sdk/client-bedrock-runtime";
 const bedrockClient = new BedrockRuntimeClient();
 
-// Needed to stream text responses back to Twilio (via WebSockets)
-import { PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
-
 export async function invokeBedrock(promptObj) {
 
     console.info("in [ invokeBedrock ] and promptObj ==> \n" + JSON.stringify(promptObj, null, 2));     
@@ -51,7 +48,7 @@ export async function invokeBedrock(promptObj) {
         
     // Declare WebSocket client to return text to Twilio
     // Client is instantiated in parent lambda.
-    const ws_client = promptObj.ws_client;
+    const ws_client = promptObj.socket;
 
     // call Bedrock and wait for response...
     const bedrockCommand = new ConverseStreamCommand(bedrockInput);
@@ -94,10 +91,7 @@ export async function invokeBedrock(promptObj) {
 
                 // Send text (current chunk content) back to WebSocket & Twilio for TTS
                 // Text is streamed back immediately to minimize latency
-                await ws_client.send(new PostToConnectionCommand({
-                    Data: Buffer.from(JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false})),
-                    ConnectionId: promptObj.ws_connectionId,             
-                }));                 
+                await ws_client.send(Buffer.from(JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false})));                 
 
 
             } else if (chunk.contentBlockDelta.delta?.toolUse) {
@@ -113,11 +107,7 @@ export async function invokeBedrock(promptObj) {
             if (contentBlocks[chunk.contentBlockStop.contentBlockIndex].responseType == "text") {
 
                 // Current text turn has ended
-                await ws_client.send(new PostToConnectionCommand({
-                    Data: Buffer.from(JSON.stringify({type:"text", token:"", last:true})),
-                    ConnectionId: promptObj.ws_connectionId,             
-                }));                 
-
+                await ws_client.send(Buffer.from(JSON.stringify({type:"text", token:"", last:true})));                 
             }
             
         } else if (chunk.messageStop) {            

@@ -49,9 +49,11 @@ server.on('upgrade', (request, socket, head) => {
     const URLparams = url.parse(request.url, true).query;
     if(URLparams.callSetupSessionId) {
       let wsSessionId = uuidv4(); 
-      wsServer.emit('connection', socket, request, head, URLparams.callSetupSessionId, wsSessionId);
-    }
-    else {
+      console.info("Starting WS session with ID ==> ", wsSessionId);
+      request.wsSessionId = wsSessionId;
+      request.callSetupSessionId = URLparams.callSetupSessionId;
+      wsServer.emit('connection', socket, request, head);
+    } else {
       console.error('No requestId found in the request URL');
       socket.terminate();
     }
@@ -71,37 +73,38 @@ const interval = setInterval(function ping() {
 }, 30000);
 
 // Handler functions for post WS connection
-wsServer.on('connection', async (socket, request, head, callSetupSessionId, wsSessionId) => {
+wsServer.on('connection', async (socket, request, head) => {
   // Establish the connection in the DB and in the message handler functions...
   socket.isAlive = true;
-
+  const wsSessionId = request.wsSessionId;
+  const callSetupSessionId = request.callSetupSessionId;
   try {
     await onConnectWebsocketHandler(callSetupSessionId, wsSessionId) ;
-    socket.send(JSON.stringify({statusCode: 200, body: JSON.stringify({ message: "Connected successfully" })}));
+    //socket.send(JSON.stringify( {statusCode: 200, body: { message: "Connected successfully" }}));
   } catch (error) {
-      console.error("Error in onConnectWebsocketHandler: ", error);
-      socket.send(JSON.stringify({ statusCode: 500, body: JSON.stringify({ message: "Error processing request" })}));
+    console.error("Error in onConnectWebsocketHandler: ", error);
+    //socket.send(JSON.stringify({ statusCode: 500, body: { message: "Error processing request" }}));
   }
 
   // Message handler for Twilio incoming messages
-  socket.on('message', async (message, wsSessionId) => {
-    console.log('Received message:', message);
-    console.info("EVENT\n" + JSON.stringify(message, null, 2));    
+  socket.on('message', async (message) => {
+    const messageJSON = JSON.parse(message.toString());
+    //console.log('Received message:', messageJSON);
+    console.info("EVENT\n" + JSON.stringify(messageJSON, null, 2)); 
+    console.info("MESSAGE wsSessionId: " + wsSessionId); 
 
-/*     let ws_domain_name = process.env.WS_DOMAIN_NAME;
+    let ws_domain_name = process.env.WS_DOMAIN_NAME;
     let ws_stage = "";
-    let body = JSON.parse(message);
     let toolCallCompletion = false;
 
     try {
-        await defaultWebsocketHandler(wsSessionId, ws_domain_name, socket, ws_stage, body, toolCallCompletion); 
-        socket.send(JSON.stringify({ statusCode: 200, body: 'Completed.' }));
+        await defaultWebsocketHandler(wsSessionId, ws_domain_name, socket, ws_stage, messageJSON, toolCallCompletion); 
+        //socket.send(JSON.stringify({ statusCode: 200, body: 'Completed.' }));
 
     } catch (error) {
         console.log("Message processing error => ", error);
-        socket.send(JSON.stringify({ statusCode: 500, body: 'Message processing error ' + JSON.stringify(error) }));
+        //socket.send(JSON.stringify({ statusCode: 500, body: 'Message processing error ' + JSON.stringify(error) }));
     }  
- */
   });
   socket.on('error', (error) => {
     console.error('WebSocket error:', error);

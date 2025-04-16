@@ -10,7 +10,6 @@ export const onConnectWebsocketHandler = async (callSetupSessionId, wsSessionId)
      */
 
     try {
-
         // 1) GET the record from dynamodb using event.queryStringParameters.cid
         // cid is the requestID from the initial setup     
         const callConnection = await ddbDocClient.send( new GetCommand( { TableName: process.env.TABLE_NAME, Key: { pk: callSetupSessionId, sk: "connection" } } ));
@@ -29,9 +28,6 @@ export const onConnectWebsocketHandler = async (callSetupSessionId, wsSessionId)
                 }
             })
         );
-
-        console.log("wsSessionId => ", wsSessionId);
-        console.log("callSetupSessionId ==> ", callSetupSessionId);
     } catch (error) {
         console.log("Error failed to connect => ", error);
         throw error;
