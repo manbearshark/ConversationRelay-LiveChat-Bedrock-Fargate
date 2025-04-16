@@ -7,11 +7,16 @@ import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 const ddbDocClient = DynamoDBDocumentClient.from(client);       
 
-export const defaultWebsocketHandler = async (connectionId, ws_domain_name, ws_client, ws_stage, body, toolCallCompletion) => { 
+export const defaultWebsocketHandler = async (connectionId, ws_domain_name, socket, ws_stage, body, toolCallCompletion) => { 
     try {
         // Get the core details from this connection (included user context,
         // use case, configuration details)
         const callConnection = await ddbDocClient.send( new GetCommand( { TableName: process.env.TABLE_NAME, Key: { pk: connectionId, sk: "connection" } } ));
+
+        if(!callConnection) {
+            console.error("No call connection found for connectionId: ", connectionId);
+            return;
+        }
 
         // Text prompts and dtmf events sent via WebSockets 
         // and tool call completion events follow the same steps and call the LLM
@@ -21,7 +26,7 @@ export const defaultWebsocketHandler = async (connectionId, ws_domain_name, ws_c
                 ddbDocClient: ddbDocClient, 
                 connectionId: connectionId, 
                 callConnection: callConnection, 
-                ws_client: ws_client, 
+                socket: socket, 
                 ws_domain_name: ws_domain_name, 
                 ws_stage: ws_stage, 
                 body: body, 
@@ -67,7 +72,7 @@ export const defaultWebsocketHandler = async (connectionId, ws_domain_name, ws_c
                         ddbDocClient: ddbDocClient, 
                         connectionId: connectionId, 
                         callConnection: callConnection, 
-                        ws_client: ws_client, 
+                        socket: socket, 
                         ws_domain_name: ws_domain_name, 
                         ws_stage: ws_stage, 
                         body: null, 

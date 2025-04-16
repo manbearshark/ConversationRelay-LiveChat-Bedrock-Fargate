@@ -77,7 +77,7 @@ export async function prepareAndCallLLM(prepareObj) {
                 // because it is will be told to only return the tool call (function)
                 if (dtmfResponse.replyWithFunction) {
                     // Since we are forcing a tool call, force the text reply now                            
-                    await replyToWS(prepareObj.ws_client, prepareObj.connectionId, {   
+                    await replyToWS(prepareObj.socket, prepareObj.connectionId, {   
                         type:"text",
                         token: dtmfResponse.replyText, 
                         last: true
@@ -128,6 +128,6 @@ export async function prepareAndCallLLM(prepareObj) {
         callConnection: prepareObj.callConnection.Item,
         toolCallCompletion: prepareObj.toolCallCompletion,
         tool_choice: prepareObj.tool_choice,
-        ws_client: prepareObj.ws_client
+        socket: prepareObj.socket
     });
 }

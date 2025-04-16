@@ -3,6 +3,8 @@ import bodyParser from "body-parser";
 import { WebSocketServer } from "ws";
 import { setupCallPostHandler } from './lib/setup-call-post-handler.mjs';
 import { onConnectWebsocketHandler } from './lib/onconnect-websocket-handler.mjs';
+import { defaultWebsocketHandler } from './lib/default-websocket-handler.mjs';
+
 import { v4 as uuidv4 } from 'uuid';
 import url from 'url';
 
@@ -21,11 +23,11 @@ app.post('/call-setup-restaurant-order', async (req, res) => {
   try {
     // 1) Parse BODY of request to extract Call Details
     // 2) Generate a UUID for this call session
-    let callSessionId = uuidv4();
+    let callSetupSessionId = uuidv4();
     console.log("Twilio Body: ", JSON.stringify(req.body));
     const twilio_body = req.body;
     // 3) Call the setupCallPostHandler function to handle the Twilio request
-    const twilmlResponse = await setupCallPostHandler(twilio_body, callSessionId);
+    const twilmlResponse = await setupCallPostHandler(twilio_body, callSetupSessionId);
     // 4) Send the TwiML response back to Twilio
     res.status(200).type('application/xml').send(twilmlResponse);
   } catch (error) {
@@ -45,8 +47,9 @@ server.on('upgrade', (request, socket, head) => {
   wsServer.handleUpgrade(request, socket, head, (socket) => {
     // Get the call session ID for the WebSocket connection
     const URLparams = url.parse(request.url, true).query;
-    if(URLparams.requestId) {
-      wsServer.emit('connection', socket, request, head, URLparams.requestId);
+    if(URLparams.callSetupSessionId) {
+      let wsSessionId = uuidv4(); 
+      wsServer.emit('connection', socket, request, head, URLparams.callSetupSessionId, wsSessionId);
     }
     else {
       console.error('No requestId found in the request URL');
@@ -54,8 +57,6 @@ server.on('upgrade', (request, socket, head) => {
     }
   })
 });
-
-// TODO: Add ping handler for WebSocket connections - per https://github.com/websockets/ws?tab=readme-ov-file#other-examples
 
 function heartbeat() {
   this.isAlive = true;
@@ -70,10 +71,37 @@ const interval = setInterval(function ping() {
 }, 30000);
 
 // Handler functions for post WS connection
-wsServer.on('connection', (socket, request, head, callSessionId) => {
+wsServer.on('connection', async (socket, request, head, callSetupSessionId, wsSessionId) => {
+  // Establish the connection in the DB and in the message handler functions...
   socket.isAlive = true;
-  socket.on('message', async (message, callSessionId) => {
+
+  try {
+    await onConnectWebsocketHandler(callSetupSessionId, wsSessionId) ;
+    socket.send(JSON.stringify({statusCode: 200, body: JSON.stringify({ message: "Connected successfully" })}));
+  } catch (error) {
+      console.error("Error in onConnectWebsocketHandler: ", error);
+      socket.send(JSON.stringify({ statusCode: 500, body: JSON.stringify({ message: "Error processing request" })}));
+  }
+
+  // Message handler for Twilio incoming messages
+  socket.on('message', async (message, wsSessionId) => {
     console.log('Received message:', message);
+    console.info("EVENT\n" + JSON.stringify(message, null, 2));    
+
+/*     let ws_domain_name = process.env.WS_DOMAIN_NAME;
+    let ws_stage = "";
+    let body = JSON.parse(message);
+    let toolCallCompletion = false;
+
+    try {
+        await defaultWebsocketHandler(wsSessionId, ws_domain_name, socket, ws_stage, body, toolCallCompletion); 
+        socket.send(JSON.stringify({ statusCode: 200, body: 'Completed.' }));
+
+    } catch (error) {
+        console.log("Message processing error => ", error);
+        socket.send(JSON.stringify({ statusCode: 500, body: 'Message processing error ' + JSON.stringify(error) }));
+    }  
+ */
   });
   socket.on('error', (error) => {
     console.error('WebSocket error:', error);
