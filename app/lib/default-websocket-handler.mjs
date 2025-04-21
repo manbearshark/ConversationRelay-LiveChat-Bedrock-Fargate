@@ -4,19 +4,28 @@ import { savePrompt } from './database-helpers.mjs';
 import { makeFunctionCalls } from './functions.mjs';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { onConnectWebsocketHandler } from './onconnect-websocket-handler.mjs';
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 const ddbDocClient = DynamoDBDocumentClient.from(client);       
 
-export const defaultWebsocketHandler = async (connectionId, ws_domain_name, socket, ws_stage, body, toolCallCompletion) => { 
+const getCallConnection = async (connectionId) => {
     try {
         // Get the core details from this connection (included user context,
         // use case, configuration details)
         const callConnection = await ddbDocClient.send( new GetCommand( { TableName: process.env.TABLE_NAME, Key: { pk: connectionId, sk: "connection" } } ));
-
         if(!callConnection) {
             console.error("No call connection found for connectionId: ", connectionId);
             return;
         }
+        return callConnection;
+    } catch (error) {
+        console.error("Error getting call connection: ", error);
+        throw error;
+    }
+};
+
+export const defaultWebsocketHandler = async (callSetupSessionId, connectionId, ws_domain_name, socket, ws_stage, body, toolCallCompletion) => { 
+    try {
 
         if (body?.type === "error") {
             console.error("Error event received from ConversationRelay server: ", body.description);
@@ -25,6 +34,8 @@ export const defaultWebsocketHandler = async (connectionId, ws_domain_name, sock
         // Text prompts and dtmf events sent via WebSockets 
         // and tool call completion events follow the same steps and call the LLM
         if (body?.type === "prompt" || body?.type === "dtmf") {                        
+
+            const callConnection = await getCallConnection(connectionId);
 
             const llmResult = await prepareAndCallLLM({
                 ddbDocClient: ddbDocClient, 
@@ -53,11 +64,13 @@ export const defaultWebsocketHandler = async (connectionId, ws_domain_name, sock
                 newAssistantChatMessage.tool_calls = Object.values(llmResult.tool_calls);
             }*/
 
-            console.info("newChatMessage before saving to dynamo\n" + JSON.stringify(newAssistantChatMessage, null, 2));    
+            //console.info("newChatMessage before saving to dynamo\n" + JSON.stringify(newAssistantChatMessage, null, 2));    
 
             // Save LLM result prompt to the database            
             await savePrompt(ddbDocClient, connectionId, newAssistantChatMessage);
 
+            //console.info("newAssistantChatMessage after saving to dynamo\n" + JSON.stringify(newAssistantChatMessage, null, 2));
+            
             // If the LLM Results includes tool call(s), format the results 
             // and make the tool calls
             if (Object.keys(llmResult.tool_calls).length > 0 ) {
@@ -135,7 +148,13 @@ export const defaultWebsocketHandler = async (connectionId, ws_domain_name, sock
             // PUT record
             // pk = event.requestContext.connectionId 
             // sk = setup
-            
+            try {
+                // Establish the connection in the DB and in the message handler functions...
+                console.log("onConnectWebsocketHandler called with callSetupSessionId: ", callSetupSessionId, " connectionId: ", connectionId);
+                await onConnectWebsocketHandler(callSetupSessionId, connectionId);
+            } catch (error) {
+                console.error("Error in onConnectWebsocketHandler: ", error);
+            }
         } else if (body?.type === "end") {
 
             /**

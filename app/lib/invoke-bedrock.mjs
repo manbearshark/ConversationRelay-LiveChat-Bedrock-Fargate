@@ -91,6 +91,7 @@ export async function invokeBedrock(promptObj) {
 
                 // Send text (current chunk content) back to WebSocket & Twilio for TTS
                 // Text is streamed back immediately to minimize latency
+                //console.info("Sending text to WebSocket ==> \n" + JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false}, null, 2));
                 await ws_client.send(Buffer.from(JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false})));                 
 
 
@@ -107,6 +108,7 @@ export async function invokeBedrock(promptObj) {
             if (contentBlocks[chunk.contentBlockStop.contentBlockIndex].responseType == "text") {
 
                 // Current text turn has ended
+                //console.info("Sending text to WebSocket ==> \n" + JSON.stringify({type:"text", token:"", last:true}, null, 2));
                 await ws_client.send(Buffer.from(JSON.stringify({type:"text", token:"", last:true})));                 
             }
             

@@ -2,8 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import { WebSocketServer } from "ws";
 import { setupCallPostHandler } from './lib/setup-call-post-handler.mjs';
-import { onConnectWebsocketHandler } from './lib/onconnect-websocket-handler.mjs';
-import { defaultWebsocketHandler } from './lib/default-websocket-handler.mjs';
+import { defaultWebsocketHandler as websocketTwilioEventsHandler } from './lib/default-websocket-handler.mjs';
 
 import { v4 as uuidv4 } from 'uuid';
 import url from 'url';
@@ -48,9 +47,7 @@ server.on('upgrade', (request, socket, head) => {
     // Get the call session ID for the WebSocket connection
     const URLparams = url.parse(request.url, true).query;
     if(URLparams.callSetupSessionId) {
-      let wsSessionId = uuidv4(); 
-      console.info("Starting WS session with ID ==> ", wsSessionId);
-      request.wsSessionId = wsSessionId;
+      // The call setuo session ID is passed in the URL as a query parameter object
       request.callSetupSessionId = URLparams.callSetupSessionId;
       wsServer.emit('connection', socket, request, head);
     } else {
@@ -73,32 +70,25 @@ const interval = setInterval(function ping() {
 }, 30000);
 
 // Handler functions for post WS connection
-wsServer.on('connection', async (socket, request, head) => {
-  // Establish the connection in the DB and in the message handler functions...
+wsServer.on('connection', (socket, request, head) => {
   socket.isAlive = true;
-  const wsSessionId = request.wsSessionId;
-  const callSetupSessionId = request.callSetupSessionId;
-  try {
-    await onConnectWebsocketHandler(callSetupSessionId, wsSessionId) ;
-    //socket.send(JSON.stringify( {statusCode: 200, body: { message: "Connected successfully" }}));
-  } catch (error) {
-    console.error("Error in onConnectWebsocketHandler: ", error);
-    //socket.send(JSON.stringify({ statusCode: 500, body: { message: "Error processing request" }}));
-  }
-
+  // THIS METHOD MUST NOT BE ASYNC - ONLY THE ONMESSAGE HANDLER CAN BE ASYNC
   // Message handler for Twilio incoming messages
   socket.on('message', async (message) => {
     const messageJSON = JSON.parse(message.toString());
-    //console.log('Received message:', messageJSON);
-    console.info("EVENT\n" + JSON.stringify(messageJSON, null, 2)); 
-    console.info("MESSAGE wsSessionId: " + wsSessionId); 
 
     let ws_domain_name = process.env.WS_DOMAIN_NAME;
     let ws_stage = "";
     let toolCallCompletion = false;
+    // We will use the session ID from the Twilio session as a way to link logs on the Twilio side JIC
+    const wsSessionId = messageJSON.sessionId;
+    const callSetupSessionId = request.callSetupSessionId;
+    //console.log('Received message:', messageJSON);
+    console.info("EVENT\n" + JSON.stringify(messageJSON, null, 2)); 
+    console.info(`"callSetupSessionId: ${callSetupSessionId} wsSessionId: ${wsSessionId}`);
 
     try {
-        await defaultWebsocketHandler(wsSessionId, ws_domain_name, socket, ws_stage, messageJSON, toolCallCompletion); 
+        await websocketTwilioEventsHandler(callSetupSessionId, wsSessionId, ws_domain_name, socket, ws_stage, messageJSON, toolCallCompletion); 
         //socket.send(JSON.stringify({ statusCode: 200, body: 'Completed.' }));
 
     } catch (error) {

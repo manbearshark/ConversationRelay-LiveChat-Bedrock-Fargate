@@ -8,7 +8,7 @@ services:
       - AWS_SESSION_TOKEN
       - AWS_PROFILE
       - AWS_REGION
-      - INFERENCE_PROFILE_ARN=arn:aws:bedrock:us-west-2:971461683291:application-inference-profile/rf1lhbi3cyal
+      - INFERENCE_PROFILE_ARN=arn:aws:bedrock:us-west-2:971461683291:application-inference-profile/1hk28ot0ohkc
       - TABLE_NAME=twilio-conr-bedr-ConversationRelayAppDatabase
       - AWS_REGION=us-west-2
       - STACK_USE_CASE=restaurantOrderingUseCase
