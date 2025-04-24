@@ -9,10 +9,11 @@ services:
       - AWS_PROFILE
       - AWS_REGION
       - INFERENCE_PROFILE_ARN=arn:aws:bedrock:us-east-1:971461683291:inference-profile/us.anthropic.claude-3-5-sonnet-20240620-v1:0
-      - TABLE_NAME=twilio-conr-bedr-ConversationRelayAppDatabase
+      - TABLE_NAME=CR-local-ConversationRelayAppDatabase
       - AWS_REGION=us-east-1
       - STACK_USE_CASE=restaurantOrderingUseCase
-      - WS_URL=wss://dfe9-75-85-156-88.ngrok-free.app
+      # THERE MUST BE A SLASH AT THE END OF THE URL - TWILIO DOES NOT LIKE IT WITHOUT IT
+      - WS_URL=wss://dfe9-75-85-156-88.ngrok-free.app/
     secrets:
       - source: aws
         target: /home/node/.aws
