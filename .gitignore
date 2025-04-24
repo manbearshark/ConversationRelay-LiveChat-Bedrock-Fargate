@@ -1,5 +1,6 @@
 # SAM
 .aws-sam
+.toml
 
 # Logs
 logs

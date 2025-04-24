@@ -16,7 +16,7 @@ Take Output from the stack called "TwimlAPI" and assign it to the Webhook for Vo
 ====================================================
 3) DATA LOADING
 ====================================================
-aws dynamodb put-item --table-name twilio-conr-bedr-ConversationRelayAppDatabase --item "$(node ./configuration/dynamo-loaders/restaurantOrderingUseCase.js | cat)"
+aws dynamodb put-item --table-name CR-local-ConversationRelayAppDatabase --item "$(node ./configuration/dynamo-loaders/restaurantOrderingUseCase.js | cat)"
 
 ====================================================
 4) ADD A PROFILE
@@ -24,7 +24,8 @@ First, edit this file [ ./configuration/dynamo-loaders/user-profile-example.json
 with your information. The primary key is the phone number in E164
 format! 
 ====================================================
-aws dynamodb put-item --table-name twilio-conr-bedr-ConversationRelayAppDatabase --item "$(node ./configuration/user-profile.js | cat)"
+aws dynamodb put-item --table-name CR-local-ConversationRelayAppDatabase --item "$(node ./configuration/user-profile.js | cat)"
 
 
 twilio-conr-bedr-ConversationRelayAppDatabase
+CR-local-ConversationRelayAppDatabase
