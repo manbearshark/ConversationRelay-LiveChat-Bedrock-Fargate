@@ -16,7 +16,18 @@ export const setupCallPostHandler = async (twilio_body, callSetupSessionId) => {
     let userContext = "";
     if (user.Item) {
         userContext = user.Item;
-    }
+    } else {
+        // Default user context if no profile found
+        userContext = {
+            name: "Dan",
+            sourceLanguageCode: "en", // ("en") What AWS Translate uses to translate
+            sourceLanguage: "en-US", // ("en-US") What ConversationRelay uses                
+            sourceLanguageFriendly: "English - United States", // ("en-US") What ConversationRelay uses                
+            sourceTranscriptionProvider: "Deepgram", // ("Deegram") Provider for transcription
+            sourceTtsProvider: "Amazon", // ("Amazon") Provider for Text-To-Speech
+            sourceVoice: "Matthew-Generative", // ("Matthew-Generative") Voice for TTS (depends on ttsProvider)                
+        };
+    }    
 
     console.info("user.Item ==>\n" + JSON.stringify(user.Item, null, 2));    
 
@@ -68,7 +79,7 @@ export const setupCallPostHandler = async (twilio_body, callSetupSessionId) => {
     // an object for the use case record. Each property of the object
     // will be injected into the TwiML tag below. Allows for Params
     // to be pulled in dynamically
-    let conversationRelayParams = useCase.Item.conversationRelayParams
+    //let conversationRelayParams = useCase.Item.conversationRelayParams
  
     // DTMF Handlers are passed into the session from the use case configuration
     // but can be changed dynamically during the session!
@@ -126,7 +137,7 @@ export const setupCallPostHandler = async (twilio_body, callSetupSessionId) => {
         
         // 6) Generate Twiml to spin up ConversationRelay connection
         let conversationRelayParams = {
-            welcomeGreeting: welcomeGreeting,
+            ...useCase.Item.conversationRelayParams,
             dtmfDetection: false,
             interruptible: false,
             interruptByDtmf: false,
