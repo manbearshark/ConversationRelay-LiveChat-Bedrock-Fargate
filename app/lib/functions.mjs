@@ -87,6 +87,7 @@ const FunctionHandler = {
 
 export async function makeFunctionCalls(ddbDocClient, tool_calls_object, connectionId, callConnection) {
 
+  try {
     const tool_calls = Object.values(tool_calls_object).map(tool => {                
         return {             
             ...tool, 
@@ -102,13 +103,21 @@ export async function makeFunctionCalls(ddbDocClient, tool_calls_object, connect
     });          
 
     await Promise.all(tool_calls.map(async (tool) => {
+      try {
 
         console.log("tool in promise all => ", tool);
         await FunctionHandler[tool.name](ddbDocClient, tool);
-
+      } catch (error) {
+        console.error(`Error calling function ${tool.name}: `, error);
+        throw new Error(`Error calling function ${tool.name}: ` + error.message);
+      }
     }));
     
     return true;
+  } catch (error) {
+    console.error("Error in makeFunctionCalls: ", error);
+    throw new Error('Error in makeFunctionCalls: ' + error.message);
+  }
 }
 
 async function saveToolResult(ddbDocClient, tool, toolResult) {

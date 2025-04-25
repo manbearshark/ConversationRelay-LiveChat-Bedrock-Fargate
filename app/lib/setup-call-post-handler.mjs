@@ -125,7 +125,20 @@ export const setupCallPostHandler = async (twilio_body, callSetupSessionId) => {
         let ws_url = `${process.env.WS_URL}?callSetupSessionId=${callSetupSessionId}`;
         
         // 6) Generate Twiml to spin up ConversationRelay connection
+        let conversationRelayParams = {
+            welcomeGreeting: welcomeGreeting,
+            dtmfDetection: false,
+            interruptible: false,
+            interruptByDtmf: false,
+            language: userContext.sourceLanguage,
+            transcriptionProvider: userContext.sourceTranscriptionProvider,
+            ttsProvider: userContext.sourceTtsProvider,
+            voice: userContext.sourceVoice,
+        };
 
+        // 4) Generate Twiml to spin up ConversationRelay connection
+        // Pull out params passed as attribute to the ConsationRelay TwiML tag
+        //  ==> Could be dynamic for language, tts, stt...
         // Pull out params ==> Could be dynamic for language, tts, stt...
         let conversationRelayParamsString = "";
         for (const [key, value] of Object.entries(conversationRelayParams)) {

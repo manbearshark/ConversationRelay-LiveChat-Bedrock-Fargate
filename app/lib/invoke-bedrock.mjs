@@ -72,59 +72,62 @@ export async function invokeBedrock(promptObj) {
 
         // Iterate over stream
         for await (const chunk of bedrockResponse.stream) {
-            
-            //console.info("chunk => \n" + JSON.stringify(chunk, null, 2)); 
-            
-            if (chunk.contentBlockStart && chunk.contentBlockStart.contentBlockIndex !== 0) {
+            try {    
+                //console.info("chunk => \n" + JSON.stringify(chunk, null, 2)); 
                 
-                //console.info("Adding additional contentBlock...");
-
-                contentBlocks.push({
-                    responseType: "toolUse",
-                    content: "",
-                    toolUseName: chunk.contentBlockStart.start.toolUse.name,
-                    toolUseId: chunk.contentBlockStart.start.toolUse.toolUseId
-                });            
-
-            } else if (chunk.contentBlockDelta) {
-                
-                if (chunk.contentBlockDelta.delta?.text) {
+                if (chunk.contentBlockStart && chunk.contentBlockStart.contentBlockIndex !== 0) {
                     
-                    contentBlocks[chunk.contentBlockDelta.contentBlockIndex].responseType = "text";
-                    contentBlocks[chunk.contentBlockDelta.contentBlockIndex].content += chunk.contentBlockDelta.delta.text || '';
+                    //console.info("Adding additional contentBlock...");
 
-                    // Send text (current chunk content) back to WebSocket & Twilio for TTS
-                    // Text is streamed back immediately to minimize latency
-                    //console.info("Sending text to WebSocket ==> \n" + JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false}, null, 2));
-                    await ws_client.send(Buffer.from(JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false})));                 
+                    contentBlocks.push({
+                        responseType: "toolUse",
+                        content: "",
+                        toolUseName: chunk.contentBlockStart.start.toolUse.name,
+                        toolUseId: chunk.contentBlockStart.start.toolUse.toolUseId
+                    });            
+
+                } else if (chunk.contentBlockDelta) {
+                    
+                    if (chunk.contentBlockDelta.delta?.text) {
+                        
+                        contentBlocks[chunk.contentBlockDelta.contentBlockIndex].responseType = "text";
+                        contentBlocks[chunk.contentBlockDelta.contentBlockIndex].content += chunk.contentBlockDelta.delta.text || '';
+
+                        // Send text (current chunk content) back to WebSocket & Twilio for TTS
+                        // Text is streamed back immediately to minimize latency
+                        console.info("Sending text to WebSocket ==> ");
+                        await ws_client.send(Buffer.from(JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false})));                 
 
 
-                } else if (chunk.contentBlockDelta.delta?.toolUse) {
+                    } else if (chunk.contentBlockDelta.delta?.toolUse) {
 
-                    // Parse the content to build tool call
-                    contentBlocks[chunk.contentBlockDelta.contentBlockIndex].responseType = "toolUse";
-                    contentBlocks[chunk.contentBlockDelta.contentBlockIndex].content += chunk.contentBlockDelta.delta.toolUse?.input;
+                        // Parse the content to build tool call
+                        contentBlocks[chunk.contentBlockDelta.contentBlockIndex].responseType = "toolUse";
+                        contentBlocks[chunk.contentBlockDelta.contentBlockIndex].content += chunk.contentBlockDelta.delta.toolUse?.input;
 
-                }
-            
-            } else if (chunk.contentBlockStop) {
+                    }
                 
-                if (contentBlocks[chunk.contentBlockStop.contentBlockIndex].responseType == "text") {
+                } else if (chunk.contentBlockStop) {
+                    
+                    if (contentBlocks[chunk.contentBlockStop.contentBlockIndex].responseType == "text") {
 
-                    // Current text turn has ended
-                    //console.info("Sending text to WebSocket ==> \n" + JSON.stringify({type:"text", token:"", last:true}, null, 2));
-                    await ws_client.send(Buffer.from(JSON.stringify({type:"text", token:"", last:true})));                 
+                        // Current text turn has ended
+                        console.info("Sending text to WebSocket ==> ");
+                        await ws_client.send(Buffer.from(JSON.stringify({type:"text", token:"", last:true})));                 
+                    }
+                    
+                } else if (chunk.messageStop) {            
+
+                    returnObj.finish_reason = chunk.messageStop.stopReason;
+
+                } else if (chunk.metadata) {
+                    // Metadata
+                    //console.log("metadata for this turn => ", chunk.metadata);
                 }
-                
-            } else if (chunk.messageStop) {            
-
-                returnObj.finish_reason = chunk.messageStop.stopReason;
-
-            } else if (chunk.metadata) {
-                // Metadata
-                //console.log("metadata for this turn => ", chunk.metadata);
+            } catch (error) {
+                console.error("Error processing chunk: ", error);
+                throw new Error('Error processing chunk: ' + error.message);
             }
-
         }
 
         // Iterate over contentBlocks to complete returnObj
