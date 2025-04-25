@@ -49,6 +49,7 @@ server.on('upgrade', (request, socket, head) => {
     if(URLparams.callSetupSessionId) {
       // The call setuo session ID is passed in the URL as a query parameter object
       request.callSetupSessionId = URLparams.callSetupSessionId;
+      request.wsSessionId = uuidv4();  // Generate a new UUID for the WebSocket session - we do not get the Twilio session ID here which is less that ideal
       wsServer.emit('connection', socket, request, head);
     } else {
       console.error('No requestId found in the request URL');
@@ -59,6 +60,7 @@ server.on('upgrade', (request, socket, head) => {
 
 function heartbeat() {
   this.isAlive = true;
+  console.log("Heartbeat received");
 }
 
 const interval = setInterval(function ping() {
@@ -74,26 +76,22 @@ wsServer.on('connection', (socket, request, head) => {
   socket.isAlive = true;
   // THIS METHOD MUST NOT BE ASYNC - ONLY THE ONMESSAGE HANDLER CAN BE ASYNC
   // Message handler for Twilio incoming messages
+  const wsSessionId = request.wsSessionId;
+  const callSetupSessionId = request.callSetupSessionId;
   socket.on('message', async (message) => {
     const messageJSON = JSON.parse(message.toString());
 
     let ws_domain_name = process.env.WS_DOMAIN_NAME;
     let ws_stage = "";
     let toolCallCompletion = false;
-    // We will use the session ID from the Twilio session as a way to link logs on the Twilio side JIC
-    const wsSessionId = messageJSON.sessionId;
-    const callSetupSessionId = request.callSetupSessionId;
-    //console.log('Received message:', messageJSON);
     console.info("EVENT\n" + JSON.stringify(messageJSON, null, 2)); 
-    console.info(`"callSetupSessionId: ${callSetupSessionId} wsSessionId: ${wsSessionId}`);
+    console.info(`"In onMessage handler: callSetupSessionId: ${callSetupSessionId} wsSessionId: ${wsSessionId}`);
 
     try {
         await websocketTwilioEventsHandler(callSetupSessionId, wsSessionId, ws_domain_name, socket, ws_stage, messageJSON, toolCallCompletion); 
-        //socket.send(JSON.stringify({ statusCode: 200, body: 'Completed.' }));
 
     } catch (error) {
         console.log("Message processing error => ", error);
-        //socket.send(JSON.stringify({ statusCode: 500, body: 'Message processing error ' + JSON.stringify(error) }));
     }  
   });
   socket.on('error', (error) => {
@@ -103,7 +101,7 @@ wsServer.on('connection', (socket, request, head) => {
     console.log('Client disconnected');
     clearInterval(interval);
   });
-  socket.on('pong', heartbeat);
+  socket.on('ping', heartbeat);
 });
 
 

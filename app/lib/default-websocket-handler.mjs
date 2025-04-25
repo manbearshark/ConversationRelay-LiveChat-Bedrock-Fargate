@@ -150,7 +150,7 @@ export const defaultWebsocketHandler = async (callSetupSessionId, connectionId, 
             // sk = setup
             try {
                 // Establish the connection in the DB and in the message handler functions...
-                console.log("onConnectWebsocketHandler called with callSetupSessionId: ", callSetupSessionId, " connectionId: ", connectionId);
+                console.log("onConnectWebsocketHandler setup event called with callSetupSessionId: ", callSetupSessionId, " connectionId: ", connectionId);
                 await onConnectWebsocketHandler(callSetupSessionId, connectionId);
             } catch (error) {
                 console.error("Error in onConnectWebsocketHandler: ", error);

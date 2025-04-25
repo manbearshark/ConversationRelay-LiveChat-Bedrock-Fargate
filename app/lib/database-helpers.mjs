@@ -13,21 +13,26 @@ import { QueryCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
  * 
  */
 export async function savePrompt(ddbDocClient, connectionId, newChatMessage) {
-    // Persist the current prompt so it is included 
-    // in subsequent calls.
-    let result = await ddbDocClient.send(
-        new PutCommand({
-            TableName: process.env.TABLE_NAME,
-            Item: {
-                pk: connectionId,
-                sk: `chat::${Date.now().toString()}`,
-                chat: newChatMessage,
-                expireAt:  parseInt((Date.now() / 1000) + 86400)  // Expire "demo" session data automatically (can be removed)
-            }
-        })
-    );
+    try {
+        // Persist the current prompt so it is included 
+        // in subsequent calls.
+        let result = await ddbDocClient.send(
+            new PutCommand({
+                TableName: process.env.TABLE_NAME,
+                Item: {
+                    pk: connectionId,
+                    sk: `chat::${Date.now().toString()}`,
+                    chat: newChatMessage,
+                    expireAt:  parseInt((Date.now() / 1000) + 86400)  // Expire "demo" session data automatically (can be removed)
+                }
+            })
+        );
 
-    return result;   
+        return result;   
+    } catch (error) {
+        console.error("Error saving prompt to database: ", error);
+        throw error;
+    }
 };
 
 /**
@@ -37,7 +42,7 @@ export async function savePrompt(ddbDocClient, connectionId, newChatMessage) {
  * to chats are automatically returned in chronological order.
  */
 export async function returnAllChats(ddbDocClient, connectionId) {
-    
+   try { 
     const chatsRaw = await ddbDocClient.send(new QueryCommand({ 
         TableName: process.env.TABLE_NAME, 
         KeyConditionExpression: "#pk = :pk and begins_with(#sk, :sk)", 
@@ -49,5 +54,8 @@ export async function returnAllChats(ddbDocClient, connectionId) {
     return chatsRaw.Items.map(chat => {                        
         return { ...chat.chat };
     });     
-
+   } catch (error) {
+        console.error("Error getting all chats: ", error);
+        throw error;
+    }   
 }

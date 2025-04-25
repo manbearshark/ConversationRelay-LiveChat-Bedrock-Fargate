@@ -8,7 +8,9 @@
 
 export async function replyToWS(socket, ws_connectionId, replyObj) {
     try {
+        console.log("Sending reply to WebSocket.");
         await socket.send(Buffer.from(JSON.stringify(replyObj)));        
+        console.log("Reply sent to WebSocket: ", replyObj);
         return true;
     } catch (error) {
         console.error("Error sending message to WebSocket: ", error);
