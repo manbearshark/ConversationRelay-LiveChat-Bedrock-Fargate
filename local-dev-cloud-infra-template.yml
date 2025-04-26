@@ -144,7 +144,6 @@ Resources:
       Roles:
         - !Ref rBedrockServiceRoleForLogging
 
-
 Outputs:
   DynamoDBTable:
     Description: DynamoDB Table Name
