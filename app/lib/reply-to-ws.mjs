@@ -6,7 +6,7 @@
  * is instantiated in the parent lambda and passed in here.
  */
 
-export async function replyToWS(socket, ws_connectionId, replyObj) {
+export function replyToWS(socket, ws_connectionId, replyObj) {
     try {
         console.log("Sending reply to WebSocket.");
         //await socket.send(Buffer.from(JSON.stringify(replyObj)));        

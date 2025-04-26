@@ -114,7 +114,7 @@ export async function invokeBedrock(promptObj) {
 
                         // Current text turn has ended
                         console.info("Sending text to WebSocket ==> ");
-                        await ws_client.send(Buffer.from(JSON.stringify({type:"text", token:"", last:true})));                 
+                        ws_client.send(Buffer.from(JSON.stringify({type:"text", token:"", last:true})));                 
                     }
                     
                 } else if (chunk.messageStop) {            
