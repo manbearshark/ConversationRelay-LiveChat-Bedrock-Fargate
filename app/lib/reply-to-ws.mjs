@@ -6,16 +6,15 @@
  * is instantiated in the parent lambda and passed in here.
  */
 
-// Needed to stream text responses back to Twilio (via WebSockets)
-import { PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
-
-export async function replyToWS(ws_client, ws_connectionId, replyObj) {
-
-    await ws_client.send(new PostToConnectionCommand({
-        Data: Buffer.from(JSON.stringify(replyObj)),        
-        ConnectionId: ws_connectionId,             
-    }));        
-
-    return true;
-    
+export async function replyToWS(socket, ws_connectionId, replyObj) {
+    try {
+        console.log("Sending reply to WebSocket.");
+        //await socket.send(Buffer.from(JSON.stringify(replyObj)));        
+        socket.send(JSON.stringify(replyObj));        
+        console.log("Reply sent to WebSocket: ", replyObj);
+        return true;
+    } catch (error) {
+        console.error("Error sending message to WebSocket: ", error);
+        return false;
+    }
 }   

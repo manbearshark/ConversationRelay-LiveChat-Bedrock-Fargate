@@ -4,7 +4,7 @@ const dynClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 const ddbDocClient = DynamoDBDocumentClient.from(dynClient);
 
 
-export const setupCallPostHandler = async (twilio_body, requestId) => {
+export const setupCallPostHandler = async (twilio_body, callSetupSessionId) => {
     // 2) Use From number to look up user record (if exists)    
     let user = null;
     try {
@@ -16,7 +16,18 @@ export const setupCallPostHandler = async (twilio_body, requestId) => {
     let userContext = "";
     if (user.Item) {
         userContext = user.Item;
-    }
+    } else {
+        // Default user context if no profile found
+        userContext = {
+            name: "Dan",
+            sourceLanguageCode: "en", // ("en") What AWS Translate uses to translate
+            sourceLanguage: "en-US", // ("en-US") What ConversationRelay uses                
+            sourceLanguageFriendly: "English - United States", // ("en-US") What ConversationRelay uses                
+            sourceTranscriptionProvider: "Deepgram", // ("Deegram") Provider for transcription
+            sourceTtsProvider: "Amazon", // ("Amazon") Provider for Text-To-Speech
+            sourceVoice: "Matthew-Generative", // ("Matthew-Generative") Voice for TTS (depends on ttsProvider)                
+        };
+    }    
 
     console.info("user.Item ==>\n" + JSON.stringify(user.Item, null, 2));    
 
@@ -68,7 +79,7 @@ export const setupCallPostHandler = async (twilio_body, requestId) => {
     // an object for the use case record. Each property of the object
     // will be injected into the TwiML tag below. Allows for Params
     // to be pulled in dynamically
-    let conversationRelayParams = useCase.Item.conversationRelayParams
+    //let conversationRelayParams = useCase.Item.conversationRelayParams
  
     // DTMF Handlers are passed into the session from the use case configuration
     // but can be changed dynamically during the session!
@@ -81,13 +92,13 @@ export const setupCallPostHandler = async (twilio_body, requestId) => {
     try {
 
         // 4) Add DB Records to establish a "session"
-        // The pk is event.requestContext.requestId which is also passed to
+        // The pk is event.requestContext.callSetupSessionId which is also passed to
         // the WebSocket connection to tie this initial request to the 
         // WebSocket connection.
 
         // This item contains core data for the session
         let connectionItem = {
-            pk: requestId,
+            pk: callSetupSessionId,
             sk: "connection",
             useCase: useCaseTitle,
             userContext: userContext,
@@ -118,14 +129,27 @@ export const setupCallPostHandler = async (twilio_body, requestId) => {
         ];*/      
         //await ddbDocClient.send(new BatchWriteCommand({ RequestItems: { [process.env.TABLE_NAME]:putRequests } }));
         
-        // 5) Create ws url adding cid param using event.requestContext.requestId
-        // This requestId param allows the call set up to be connected to
+        // 5) Create ws url adding cid param using event.requestContext.callSetupSessionId
+        // This callSetupSessionId param allows the call set up to be connected to
         // the WebSocket session (connectionId)
         
-        let ws_url = `${process.env.WS_URL}?requestId=${requestId}`;
+        let ws_url = `${process.env.WS_URL}?callSetupSessionId=${callSetupSessionId}`;
         
         // 6) Generate Twiml to spin up ConversationRelay connection
+        let conversationRelayParams = {
+            ...useCase.Item.conversationRelayParams,
+            dtmfDetection: false,
+            interruptible: false,
+            interruptByDtmf: false,
+            language: userContext.sourceLanguage,
+            transcriptionProvider: userContext.sourceTranscriptionProvider,
+            ttsProvider: userContext.sourceTtsProvider,
+            voice: userContext.sourceVoice,
+        };
 
+        // 4) Generate Twiml to spin up ConversationRelay connection
+        // Pull out params passed as attribute to the ConsationRelay TwiML tag
+        //  ==> Could be dynamic for language, tts, stt...
         // Pull out params ==> Could be dynamic for language, tts, stt...
         let conversationRelayParamsString = "";
         for (const [key, value] of Object.entries(conversationRelayParams)) {

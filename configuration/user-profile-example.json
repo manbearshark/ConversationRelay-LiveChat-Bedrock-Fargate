@@ -1,10 +1,10 @@
 {
-    "pk": "+18083888200",
+    "pk": "+19494337060",
     "sk": "profile",
     "email": "email@twilio.com",
-    "firstName": "George",
+    "firstName": "Dan",
     "lastName": "Wolf",
     "pk1": "profile",
-    "sk1": "+18083888200",
+    "sk1": "+19494337060",
     "useCase": "restaurantOrderingUseCase"
    }
