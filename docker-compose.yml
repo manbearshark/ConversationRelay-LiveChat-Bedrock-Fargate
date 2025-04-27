@@ -8,7 +8,7 @@ services:
       - AWS_SESSION_TOKEN
       - AWS_PROFILE
       - AWS_REGION
-      - INFERENCE_PROFILE_ARN=us.anthropic.claude-3-5-sonnet-20240620-v1:0
+      - INFERENCE_PROFILE_ARN=us.anthropic.claude-3-5-sonnet-20240620-v1:0 # This can an ARN or a cross-region profie
       - TABLE_NAME=CR-local-ConversationRelayAppDatabase
       - AWS_REGION=us-east-1
       - STACK_USE_CASE=restaurantOrderingUseCase
