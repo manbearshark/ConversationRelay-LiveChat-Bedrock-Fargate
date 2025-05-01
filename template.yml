@@ -264,6 +264,3 @@ Outputs:
   WSURL:
     Description: WebSocket URL for your application
     Value: !GetAtt VPC.Outputs.PublicLBWSURL
-  InferenceProfile:
-    Description: Inference Profile for Claude Sonnet
-    Value: !GetAtt BedrockApplicationInferenceProfile.InferenceProfileArn
