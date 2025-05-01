@@ -19,21 +19,17 @@ Parameters:
     Type: String
     Default: latest
 
+  pBedrockApplicationInferenceProfile:
+    Description: Inference profile used for Bedrock calls
+    Type: String
+    Default: us.anthropic.claude-3-5-sonnet-20240620-v1:0
+
 Globals:
   Function:
     Timeout: 3
     MemorySize: 128
 
 Resources:  
-  # Inference Profile for Claude Sonnet
-  # This will track usage for the model
-  BedrockApplicationInferenceProfile:
-    Type: AWS::Bedrock::ApplicationInferenceProfile
-    Properties:
-      ModelSource:
-        CopyFrom: !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0
-      InferenceProfileName: TwilioConversationRelayInferenceProfile
-      Description: Inference profile used to track usage for the Twilio Conversation Relay service
 
   # DynamoDB Table used to track conversations
   PrimaryDynamoDBTable:
@@ -147,7 +143,7 @@ Resources:
             - Name: AWS_REGION
               Value: !Ref AWS::Region
             - Name: INFERENCE_PROFILE_ARN
-              Value: !GetAtt BedrockApplicationInferenceProfile.InferenceProfileArn
+              Value: !Ref pBedrockApplicationInferenceProfile
             - Name: STACK_USE_CASE
               Value: restaurantOrderingUseCase
             - Name: WS_URL
