@@ -7,7 +7,7 @@ Parameters:
   ECRRepoURL:
     Description: The URL of the ECR repository
     Type: String
-    Default: 971461683291.dkr.ecr.us-west-2.amazonaws.com
+    Default: 703671914627.dkr.ecr.us-east-1.amazonaws.com
 
   ECRImageName:
     Description: The name of the ECR image for the service deployment  
@@ -28,6 +28,11 @@ Parameters:
     Description: Inference profile used for Bedrock calls
     Type: String
     Default: us.anthropic.claude-3-5-sonnet-20240620-v1:0
+
+  pImageName:
+    Description: Name of the ECR image for the service deployment
+    Type: String
+    Default: twilio-conversation-relay-bedrock-services
 
 Globals:
   Function:
@@ -142,7 +147,7 @@ Resources:
         - Name: twilio-conversation-relay-bedrock-service
           Cpu: 1024
           Memory: 8192
-          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/twilio-conversation-relay-bedrock-services:latest
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${pImageName}:latest
           Essential: true
           PortMappings:
             - ContainerPort: 3000
