@@ -248,6 +248,7 @@ Resources:
               - "dynamodb:*"
             Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AWS::StackName}-ConversationRelayAppDatabase"
 
+
 Outputs:
   DynamoDBTable:
     Description: DynamoDB Table Name

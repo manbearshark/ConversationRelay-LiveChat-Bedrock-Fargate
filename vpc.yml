@@ -267,8 +267,10 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref PublicLBTargetGroup
       LoadBalancerArn: !Ref PublicLoadBalancer
-      Port: 80
-      Protocol: HTTP
+      Port: 443 
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: arn:aws:acm:us-east-1:703671914627:certificate/deeca1f7-91ef-4d1e-bc73-836ad0683984
 
   PublicHTTPSecurityGroup:
     Type: AWS::EC2::SecurityGroup
