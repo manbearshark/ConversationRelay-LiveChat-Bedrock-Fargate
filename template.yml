@@ -248,6 +248,98 @@ Resources:
               - "dynamodb:*"
             Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AWS::StackName}-ConversationRelayAppDatabase"
 
+  # Bedrock CloudWatch metrics for performance and usage monitoring using automated dashboards:
+  # https://aws.amazon.com/blogs/machine-learning/improve-visibility-into-amazon-bedrock-usage-and-performance-with-amazon-cloudwatch/
+
+  rBedrockLoggingKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for Bedrock logging
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Ref AWS::AccountId
+            Action: kms:*
+            Resource: '*'
+          - Effect: Allow
+            Principal:
+              Service: logs.amazonaws.com
+            Action:
+              - kms:Decrypt*
+              - kms:Describe*
+              - kms:Encrypt*
+              - kms:GenerateDataKey*
+              - kms:ReEncrypt*
+            Resource: '*'
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${AWS::StackName}-ConversationRelayBedrockLogGroup
+
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: kms:GenerateDataKey*
+            Resource: '*'
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:*
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+
+  rBedrockLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "${AWS::StackName}-ConversationRelayBedrockLogGroup" 
+      RetentionInDays: 30
+    UpdateReplacePolicy: Delete 
+    DeletionPolicy: Delete
+
+  rBedrockServiceRoleForLogging:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+          - Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:*
+            Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+        Version: '2012-10-17'
+
+  rBedrockServiceRoleForLoggingDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource: !GetAtt rBedrockLogGroup.Arn
+          - Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey*
+              - kms:ReEncrypt*
+            Effect: Allow
+            Resource: !GetAtt rBedrockLoggingKey.Arn
+        Version: '2012-10-17'
+      PolicyName: BedrockLoggingRoleDefaultPolicy
+      Roles:
+        - !Ref rBedrockServiceRoleForLogging
 
 Outputs:
   DynamoDBTable:
