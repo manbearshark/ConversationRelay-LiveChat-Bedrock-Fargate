@@ -5,6 +5,7 @@ Parameters:
   pCustomerDomainCertificateArn:
     Type: String
     Description: The ARN of the certificate for the load balancer. This should be a certificate in AWS Certificate Manager (ACM) in the same region as the load balancer.
+    Default: arn:aws:acm:us-east-1:703671914627:certificate/deeca1f7-91ef-4d1e-bc73-836ad0683984
 
 Mappings:
   SubnetConfig:
@@ -297,11 +298,11 @@ Resources:
   ApplicationLBSecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      Description: Allow from anyone on port 80
+      Description: Allow from anyone on port 443
       IpProtocol: tcp
       CidrIp: 0.0.0.0/0
-      FromPort: 80
-      ToPort: 80
+      FromPort: 443
+      ToPort: 443
       GroupId: !Ref PublicHTTPSecurityGroup
 
   # VPC Endpoints for Bedrock
@@ -364,13 +365,13 @@ Outputs:
   PublicLBFQDN:
     Value: !Join
       - ''
-      - - http://
+      - - https://
         - !GetAtt PublicLoadBalancer.DNSName
         - /
   PublicLBWSURL:
     Value: !Join
       - ''
-      - - ws://
+      - - wss://
         - !GetAtt PublicLoadBalancer.DNSName
   VPCID:
     Value: !Ref VPC
