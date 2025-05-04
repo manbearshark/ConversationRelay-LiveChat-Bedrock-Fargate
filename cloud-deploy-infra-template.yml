@@ -1,4 +1,3 @@
-AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: AWS Fargate with VPC, ALB, ECR, Bedrock, PrivateLink, and Twilio Conversation Relay
 
@@ -453,6 +452,7 @@ Resources:
   
   Service:
     Type: AWS::ECS::Service
+    DependsOn: PublicLoadBalancer
     Properties:
       ServiceName: "twilio-conversation-relay-bedrock-service"
       Cluster: !Ref Cluster
@@ -462,8 +462,8 @@ Resources:
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
-          Subnets: [!GetAtt "VPC.Outputs.PublicSubnet1", !GetAtt VPC.Outputs.PublicSubnet2]
-          SecurityGroups: [!GetAtt VPC.Outputs.SG]
+          Subnets: [!Ref PublicSubnet1, !Ref PublicSubnet2]
+          SecurityGroups: [!Ref PublicHTTPSecurityGroup]
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 50
@@ -475,7 +475,7 @@ Resources:
       LoadBalancers:
         - ContainerName: "twilio-conversation-relay-bedrock-service"
           ContainerPort: 3000
-          TargetGroupArn: !GetAtt VPC.Outputs.LB
+          TargetGroupArn: !Ref PublicLBTargetGroup
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -506,18 +506,9 @@ Resources:
             - Name: STACK_USE_CASE
               Value: restaurantOrderingUseCase
             - Name: WS_URL
-              #Value: !GetAtt VPC.Outputs.PublicLBWSURL
               Value: !Ref pPublicWSSEndpoint
             - Name: TABLE_NAME
               Value: !Ref PrimaryDynamoDBTable
-            # - Name: NODE_ENV
-            #   Value: !Ref Environment
-            # - Name: DB_HOST
-            #   Value: !Sub "{{resolve:ssm:${DBHostParameter}:1}}"
-            # - Name: DB_USER
-            #   Value: !Sub "{{resolve:ssm:${DBUserParameter}:1}}"
-            # - Name: DB_PASSWORD
-            #   Value: !Sub "{{resolve:ssm:${DBPasswordParameter}:1}}"
           LogConfiguration:
             LogDriver: awslogs
             Options:
