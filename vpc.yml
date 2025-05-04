@@ -5,7 +5,7 @@ Parameters:
   pCustomerDomainCertificateArn:
     Type: String
     Description: The ARN of the certificate for the load balancer. This should be a certificate in AWS Certificate Manager (ACM) in the same region as the load balancer.
-    Default: arn:aws:acm:us-east-1:703671914627:certificate/deeca1f7-91ef-4d1e-bc73-836ad0683984
+    Default: 
 
 Mappings:
   SubnetConfig:

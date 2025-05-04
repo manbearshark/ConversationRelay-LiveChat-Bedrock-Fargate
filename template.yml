@@ -19,7 +19,7 @@ Parameters:
     Type: String
     Default: latest
 
-  pCustomerDomainCertARN:
+  pCustomerDomainCertificateArn:
     Description: The ARN of the certificate for the custom domain
     Type: String
     Default: arn:aws:acm:us-east-1:703671914627:certificate/deeca1f7-91ef-4d1e-bc73-836ad0683984
@@ -96,7 +96,7 @@ Resources:
     Properties:
       Location: ./vpc.yml
     Parameters:      
-      pCustomerDomainCertificateArn: !Ref pCustomerDomainCertARN
+      pCustomerDomainCertificateArn: !Ref pCustomerDomainCertificateArn
 
   # Cluster and Service for Fargate
   # This will create a cluster and service for the Twilio Conversation Relay service
