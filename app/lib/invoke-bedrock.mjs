@@ -167,6 +167,12 @@ export async function invokeBedrock(promptObj) {
         return returnObj;
     } catch (error) {
         console.error("Error in invokeBedrock: ", error);
-        throw new Error('Error in invokeBedrock: ' + error.message);
+        if(error.name === 'ThrottlingException') {
+            console.error("ThrottlingException: from Bedrock.");
+            // In some instances, the Bedrock API may throttle requests.
+            // Handle the error accordingly, e.g., retry after a delay
+        } else {
+            throw new Error('Error in invokeBedrock: ' + error.message);
+        }
     }    
 }   
