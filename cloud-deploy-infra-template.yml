@@ -36,7 +36,7 @@ Parameters:
   pPublicWSSEndpoint:
     Description: Name of the ECR image for the service deployment
     Type: String
-    Default: wss://bedrock.aws.twiliosoapbox.com/
+    Default: wss://genaivoice.app/
 
 Globals:
   Function:
