@@ -355,7 +355,7 @@ Resources:
       Port: 443 
       Protocol: HTTPS
       Certificates:
-        - CertificateArn: {!Ref pCustomerDomainCertificateArn} 
+        - CertificateArn: !Ref pCustomerDomainCertificateArn 
 
   PublicHTTPSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -722,3 +722,17 @@ Outputs:
       - ''
       - - wss://
         - !GetAtt PublicLoadBalancer.DNSName
+  VPCID:
+    Value: !Ref VPC
+  PublicSubnet1:
+    Value: !Ref PublicSubnet1
+  PublicSubnet2:
+    Value: !Ref PublicSubnet2
+  PrivateSubnet1:
+    Value: !Ref PrivateSubnet1
+  PrivateSubnet2:
+    Value: !Ref PrivateSubnet2
+  LB:
+    Value: !Ref PublicLBTargetGroup
+  SG:
+    Value: !Ref PublicHTTPSecurityGroup

@@ -43,7 +43,8 @@ CLOUD DEPLOYMENT:
 Run `sam build` from this directory every time before deploying.
 
 Run 
-sam deploy --guided --stack-name CR-AWS-BEDROCK --template template.yml --profile ConversationRelayPrgDanBartlett --capabilities CAPABILITY_NAMED_IAM
+sam build --template-file cloud-deploy-infra-template.yml
+sam deploy --guided --stack-name CR-AWS-BEDROCK --template cloud-deploy-infra-template.yml --capabilities CAPABILITY_NAMED_IAM --profile ConversationRelayPrgDanBartlett 
 
 * The first time you deploy, add `--guided` (`sam deploy --guided --stack-name...`) to the above command to generate a configuration file. All subsequent commands do not need the --guided.
 
