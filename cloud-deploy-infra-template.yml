@@ -6,7 +6,7 @@ Parameters:
   pECRRepoURL:
     Description: The URL of the ECR repository where the Docker image is stored. This should be in the region that the stack is being deployed to.
     Type: String
-    Default: 703671914627.dkr.ecr.us-east-1.amazonaws.com
+    Default: ''
 
   pImageName:
     Description: Name of the ECR image for the service deployment.
@@ -21,7 +21,7 @@ Parameters:
   pCustomerDomainCertificateArn:
     Description: The ARN of the certificate for the custom domain that is ALIASEd to the load balancer in this template.
     Type: String
-    Default: arn:aws:acm:us-east-1:971461683291:certificate/9412e7f0-51c5-4573-bceb-f95c4b25f4b1
+    Default: '' 
 
   pBedrockApplicationInferenceProfile:
     Description: Bedrock inference profile used for LLM calls.  By default this is set to a Nova cross-region profile.
@@ -31,7 +31,7 @@ Parameters:
   pPublicWSSEndpoint:
     Description: Public WebSocket endpoint for the application - Twilio will call this endpoint to establish a voice connection. 
     Type: String
-    Default: wss://genaivoice.app/
+    Default: '' 
 
 Globals:
   Function:
