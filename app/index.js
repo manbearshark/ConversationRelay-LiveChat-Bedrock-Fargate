@@ -81,6 +81,7 @@ wsServer.on('connection', (socket, request, head) => {
   socket.on('message', async (message) => {
     const messageJSON = JSON.parse(message.toString());
 
+    // TODO: This is not being used downstream and should be removed - this ENV parameter is not being set anywhere 
     let ws_domain_name = process.env.WS_DOMAIN_NAME;
     let ws_stage = "";
     let toolCallCompletion = false;
