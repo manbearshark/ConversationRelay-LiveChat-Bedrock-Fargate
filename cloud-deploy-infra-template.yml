@@ -3,7 +3,7 @@ Description: AWS Fargate with VPC, ALB, ECR, Bedrock, PrivateLink, and Twilio Co
 
 Parameters:
 
-  ECRRepoURL:
+  pECRRepoURL:
     Description: The URL of the ECR repository where the Docker image is stored
     Type: String
     Default: 703671914627.dkr.ecr.us-east-1.amazonaws.com
@@ -489,7 +489,7 @@ Resources:
         - Name: twilio-conversation-relay-bedrock-service
           Cpu: 1024
           Memory: 8192
-          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${pImageName}:latest
+          Image: !Sub ${pERCRepoURL}/${pImageName}:latest
           Essential: true
           PortMappings:
             - ContainerPort: 3000
