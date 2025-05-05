@@ -4,32 +4,32 @@ Description: AWS Fargate with VPC, ALB, ECR, Bedrock, PrivateLink, and Twilio Co
 Parameters:
 
   pECRRepoURL:
-    Description: The URL of the ECR repository where the Docker image is stored
+    Description: The URL of the ECR repository where the Docker image is stored. This should be in the region that the stack is being deployed to.
     Type: String
     Default: 703671914627.dkr.ecr.us-east-1.amazonaws.com
 
   pImageName:
-    Description: Name of the ECR image for the service deployment
+    Description: Name of the ECR image for the service deployment.
     Type: String
     Default: twilio-conversation-relay-bedrock-services
 
   pImageTag:
-    Description: The ECR image tag - corresponds to the version of the image     
+    Description: The ECR image tag - corresponds to the version of the image.
     Type: String
     Default: latest
 
   pCustomerDomainCertificateArn:
-    Description: The ARN of the certificate for the custom domain that is ALIASEd to the load balancer in this template
+    Description: The ARN of the certificate for the custom domain that is ALIASEd to the load balancer in this template.
     Type: String
     Default: arn:aws:acm:us-east-1:971461683291:certificate/9412e7f0-51c5-4573-bceb-f95c4b25f4b1
 
   pBedrockApplicationInferenceProfile:
-    Description: Inference profile used for Bedrock calls
+    Description: Bedrock inference profile used for LLM calls.  By default this is set to a Nova cross-region profile.
     Type: String
     Default: us.amazon.nova-micro-v1:0
 
   pPublicWSSEndpoint:
-    Description: Name of the ECR image for the service deployment
+    Description: Public WebSocket endpoint for the application - Twilio will call this endpoint to establish a voice connection. 
     Type: String
     Default: wss://genaivoice.app/
 
@@ -634,8 +634,8 @@ Resources:
                 aws:SourceArn: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:*
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
-    UpdateReplacePolicy: Retain
-    DeletionPolicy: Retain
+    UpdateReplacePolicy: Delete 
+    DeletionPolicy: Delete 
 
   rBedrockLogGroup:
     Type: AWS::Logs::LogGroup
