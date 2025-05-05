@@ -21,6 +21,9 @@ let useCase =
       "dtmfDetection": {
         "BOOL": true
       },
+      "interruptible": {
+        "BOOL": true
+      },
       "interruptByDtmf": {
         "BOOL": true
       },

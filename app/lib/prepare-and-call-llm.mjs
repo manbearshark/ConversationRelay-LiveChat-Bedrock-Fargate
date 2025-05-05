@@ -1,6 +1,5 @@
 import { invokeBedrock } from './invoke-bedrock.mjs';
 import { returnAllChats, savePrompt} from './database-helpers.mjs';
-import { replyToWS } from './reply-to-ws.mjs';
 
 export async function prepareAndCallLLM(prepareObj) {
     try {
@@ -19,7 +18,7 @@ export async function prepareAndCallLLM(prepareObj) {
         // and string with timestamp for simple query that
         // returns chronologically sorted results.
         // This is the chat history between system, assistant, tools, user
-        const messages = await returnAllChats(prepareObj.ddbDocClient, prepareObj.connectionId);    
+        const messages = await returnAllChats(prepareObj.ddbDocClient, prepareObj.callSid);    
 
         // If this is a prompt from the WebSocket connection, then it
         // is text (speech-to-text) from the user. Persist the user prompt 
@@ -30,7 +29,7 @@ export async function prepareAndCallLLM(prepareObj) {
             let newUserChatMessage = { role: "user", content: [ { text: prepareObj.body.voicePrompt } ] };
             
             // Persist the current prompt so it is included in subsequent calls.
-            await savePrompt(prepareObj.ddbDocClient, prepareObj.connectionId, newUserChatMessage);                
+            await savePrompt(prepareObj.ddbDocClient, prepareObj.callSid, newUserChatMessage);                
 
             // Add message to context before calling LLM in this current event.
             messages.push( newUserChatMessage );
@@ -49,7 +48,7 @@ export async function prepareAndCallLLM(prepareObj) {
             // dtmf handlers are included in the use case configuration and
             // attached to a session. The dtmf handlers can be overwritten
             // if need as a user moves through a session.
-            let dtmfHandlers = JSON.parse(prepareObj.callConnection.Item.dtmfHandlers);                
+            let dtmfHandlers = JSON.parse(prepareObj.callConnection.dtmfHandlers);                
             //console.info("==> dtmfHandlers\n" + JSON.stringify(dtmfHandlers, null, 2));   
             
             // Pull the response associated to the digit pressed
@@ -70,18 +69,21 @@ export async function prepareAndCallLLM(prepareObj) {
                 };
 
                 if (dtmfResponse.replyWithText) {
+
                     newUserDTMFMessage.content = newUserDTMFMessage.content + ` Reply to the user with this text: "${dtmfResponse.replyText}"`; 
                     
                     // If a tool call is required, then the reply text needs
                     // to sent here because the LLM will not return the text
                     // because it is will be told to only return the tool call (function)
                     if (dtmfResponse.replyWithFunction) {
-                        // Since we are forcing a tool call, force the text reply now                            
-                        replyToWS(prepareObj.socket, prepareObj.connectionId, {   
-                            type:"text",
-                            token: dtmfResponse.replyText, 
-                            last: true
-                        });                            
+                        promptObj.socket.send(
+                            JSON.stringify(
+                                {
+                                    type:"text", 
+                                    token: dtmfResponse.replyText, 
+                                    last:true
+                                })
+                        );
                     }
                 }
 
@@ -93,7 +95,7 @@ export async function prepareAndCallLLM(prepareObj) {
                 }                    
                 
                 // Persist the current prompt so it is included in subsequent calls.
-                await savePrompt(prepareObj.ddbDocClient, prepareObj.connectionId, prepareObj.newUserDTMFMessage);
+                await savePrompt(prepareObj.ddbDocClient, prepareObj.callSid, prepareObj.newUserDTMFMessage);
 
                 // Add message to context before calling LLM in this current event.
                 messages.push( newUserDTMFMessage );
@@ -105,8 +107,8 @@ export async function prepareAndCallLLM(prepareObj) {
 
             /**
              * Upon completing one or more tool calls, this function is
-             * invoked to continue the conversation. The tool call lambdas update
-             * the database with their results so they would already be 
+             * invoked to continue the conversation. The tool call functions
+             * updatethe database with their results so they would already be 
              * in the "messages" array. 
              * 
              * The boolean toolCallCompletion is passed to the LLM handler
@@ -122,14 +124,13 @@ export async function prepareAndCallLLM(prepareObj) {
 
         // Call the LLM passing context and chat history
         return await invokeBedrock({
-            ws_endpoint: `${prepareObj.ws_domain_name}/${prepareObj.ws_stage}`,
-            ws_connectionId: prepareObj.connectionId, 
             messages: messages,
-            callConnection: prepareObj.callConnection.Item,
+            callConnection: prepareObj.callConnection,
             toolCallCompletion: prepareObj.toolCallCompletion,
             tool_choice: prepareObj.tool_choice,
             socket: prepareObj.socket
         });
+        
     } catch (error) {
         console.error("Error in prepareAndCallLLM: ", error);
         throw error;
