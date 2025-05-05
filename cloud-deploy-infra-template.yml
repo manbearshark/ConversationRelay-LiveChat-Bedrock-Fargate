@@ -1,0 +1,724 @@
+Transform: AWS::Serverless-2016-10-31
+Description: AWS Fargate with VPC, ALB, ECR, Bedrock, PrivateLink, and Twilio Conversation Relay
+
+Parameters:
+
+  pECRRepoURL:
+    Description: The URL of the ECR repository where the Docker image is stored. This should be in the region that the stack is being deployed to.
+    Type: String
+    Default: ''
+
+  pImageName:
+    Description: Name of the ECR image for the service deployment.
+    Type: String
+    Default: twilio-conversation-relay-bedrock-services
+
+  pImageTag:
+    Description: The ECR image tag - corresponds to the version of the image.
+    Type: String
+    Default: latest
+
+  pCustomerDomainCertificateArn:
+    Description: The ARN of the certificate for the custom domain that is ALIASEd to the load balancer in this template.
+    Type: String
+    Default: '' 
+
+  pBedrockApplicationInferenceProfile:
+    Description: Bedrock inference profile used for LLM calls.  By default this is set to a Nova cross-region profile.
+    Type: String
+    Default: us.amazon.nova-micro-v1:0
+
+  pPublicWSSEndpoint:
+    Description: Public WebSocket endpoint for the application - Twilio will call this endpoint to establish a voice connection. 
+    Type: String
+    Default: '' 
+
+Globals:
+  Function:
+    Timeout: 3
+    MemorySize: 128
+
+Mappings:
+  SubnetConfig:
+    VPC:
+      CIDR: 10.0.0.0/16
+    Public1:
+      CIDR: 10.0.0.0/19
+    Public2:
+      CIDR: 10.0.32.0/19
+    Private1:
+      CIDR: 10.0.64.0/19
+    Private2:
+      CIDR: 10.0.96.0/19
+
+Resources:  
+  # DynamoDB Table used to track conversations
+  PrimaryDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TimeToLiveSpecification:
+        AttributeName: expireAt
+        Enabled: true
+      TableName: !Sub "${AWS::StackName}-ConversationRelayAppDatabase"
+      BillingMode: 'PAY_PER_REQUEST'
+      AttributeDefinitions:
+        -
+          AttributeName: "pk"
+          AttributeType: "S"
+        -
+          AttributeName: "sk"
+          AttributeType: "S"
+        -
+          AttributeName: "pk1"
+          AttributeType: "S"
+        -
+          AttributeName: "sk1"
+          AttributeType: "S"
+      KeySchema:
+        -
+          AttributeName: "pk"
+          KeyType: "HASH"
+        -
+          AttributeName: "sk"
+          KeyType: "RANGE"
+      GlobalSecondaryIndexes:
+        -
+          IndexName: "index-1-full"
+          KeySchema:
+            -
+              AttributeName: "pk1"
+              KeyType: "HASH"
+            -
+              AttributeName: "sk1"
+              KeyType: "RANGE"
+          Projection:
+            ProjectionType: "ALL"
+
+  # VPC and Security Group
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      CidrBlock: !FindInMap
+        - SubnetConfig
+        - VPC
+        - CIDR
+      Tags:
+        - Key: Name
+          Value: VPC
+
+  # VPC Internet Gateway and Attachment
+  VPCInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: VPC Internet Gateway
+
+  VPCInternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref VPCInternetGateway
+
+  # Public Subnet
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: AWS::Region
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - SubnetConfig
+        - Public1
+        - CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: Public Subnet 1
+
+  PublicSubnet1RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Public Subnet 1 Route Table
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicSubnet1RouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet1DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref VPCInternetGateway
+    DependsOn:
+      - VPC
+
+  PublicSubnet1EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  PublicSubnet1NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt PublicSubnet1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: Public Subnet 1 Nat Gateway
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs
+          Ref: AWS::Region
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - SubnetConfig
+        - Public2
+        - CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: Public Subnet 2
+
+  PublicSubnet2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Public Subnet 2 Route Table
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicSubnet2RouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  PublicSubnet2DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref VPCInternetGateway
+    DependsOn:
+      - VPC
+
+  PublicSubnet2EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  PublicSubnet2NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt PublicSubnet2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: Public Subnet 2 Nat Gateway
+
+  # Private Subnets
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: AWS::Region
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - SubnetConfig
+        - Private1
+        - CIDR
+      Tags:
+        - Key: Name
+          Value: Subnet-One
+
+  Private1RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: rt-1
+
+  Private1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref Private1RouteTable
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateSubnet1DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref Private1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref PublicSubnet1NatGateway
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs
+          Ref: AWS::Region
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap
+        - SubnetConfig
+        - Private2
+        - CIDR
+      Tags:
+        - Key: Name
+          Value: Subnet-Two
+
+  Private2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: rt-2
+
+  Private2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref Private2RouteTable
+      SubnetId: !Ref PrivateSubnet2
+
+  PrivateSubnet2DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref Private2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref PublicSubnet2NatGateway
+
+  # Load Balancer Configuration
+  PublicLoadBalancer:
+    DependsOn: VPCInternetGateway
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: public-http-lb
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref PublicHTTPSecurityGroup
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Type: application
+
+  PublicLBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      #  Check if your application is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
+      HealthCheckIntervalSeconds: 10 # Default is 30.
+      HealthyThresholdCount: 2 # Default is 5.
+      HealthCheckTimeoutSeconds: 5
+      HealthCheckPath: /health
+      UnhealthyThresholdCount: 2
+      Name: public-tg
+      VpcId: !Ref VPC
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 0
+      Port: 3000
+      TargetType: ip
+      IpAddressType: ipv4
+
+  PublicLBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PublicLBTargetGroup
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Port: 443 
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref pCustomerDomainCertificateArn 
+
+  PublicHTTPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTP access to the public facing load balancer
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: '-1'
+      SecurityGroupIngress:
+        # Allow traffic from services on port 3000
+        - CidrIp: 0.0.0.0/0
+          Description: Allow traffic from services on port 3000
+          FromPort: 3000
+          IpProtocol: tcp
+          ToPort: 3000
+      VpcId: !Ref VPC
+
+  ApplicationLBSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow from anyone on port 443
+      IpProtocol: tcp
+      CidrIp: 0.0.0.0/0
+      FromPort: 443
+      ToPort: 443
+      GroupId: !Ref PublicHTTPSecurityGroup
+
+  # VPC Endpoints for Bedrock
+  # VPCEndpointSecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     GroupDescription: Allow TLS for VPC Endpoint
+  #     VpcId: !Ref VPC
+  #     Tags:
+  #       - Key: Name
+  #         Value: twilio-cr-br-endpoint-security-group
+
+  # SecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     GroupDescription: security group for bedrock workload in private subnets
+  #     VpcId: !Ref VPC
+  #     Tags:
+  #       - Key: Name
+  #         Value: twilio-cr-br-security-group
+
+  # EndpointSecurityGroupIngress:
+  #   Type: AWS::EC2::SecurityGroupIngress
+  #   Properties:
+  #     IpProtocol: tcp
+  #     FromPort: 443
+  #     ToPort: 443
+  #     GroupId: !Ref VPCEndpointSecurityGroup
+  #     SourceSecurityGroupId: !Ref SecurityGroup
+
+  # VPCEndpointBedrockRuntime:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             AWS:
+  #               - !Ref AWS::AccountId
+  #           Action:
+  #             - bedrock:*
+  #           Resource:
+  #             - arn:aws:bedrock:*
+  #     VpcEndpointType: Interface
+  #     PrivateDnsEnabled: true
+  #     SubnetIds:
+  #       - !Ref PrivateSubnet1
+  #       - !Ref PrivateSubnet2
+
+  #     SecurityGroupIds:
+  #       - !Ref VPCEndpointSecurityGroup
+  #       - !Ref PublicHTTPSecurityGroup
+  #     ServiceName: !Sub com.amazonaws.${AWS::Region}.bedrock-runtime
+  #     VpcId: !Ref VPC
+
+  # Cluster and Service for Fargate
+  # This will create a cluster and service for the Twilio Conversation Relay service
+  # The service will be deployed in the VPC created above
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      CapacityProviders: 
+        - FARGATE
+  
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: PublicLoadBalancer
+    Properties:
+      ServiceName: "twilio-conversation-relay-bedrock-service"
+      Cluster: !Ref Cluster
+      LaunchType: FARGATE
+      EnableExecuteCommand: true
+      HealthCheckGracePeriodSeconds: 5
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: [!Ref PublicSubnet1, !Ref PublicSubnet2]
+          SecurityGroups: [!Ref PublicHTTPSecurityGroup]
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 50
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      DesiredCount: 1
+      TaskDefinition: !Ref "TaskDefinition"
+      LoadBalancers:
+        - ContainerName: "twilio-conversation-relay-bedrock-service"
+          ContainerPort: 3000
+          TargetGroupArn: !Ref PublicLBTargetGroup
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: twilio-conversation-relay-service 
+      Cpu: 1024
+      Memory: 8192
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !Ref ECSTaskRole
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+      ContainerDefinitions:
+        - Name: twilio-conversation-relay-bedrock-service
+          Cpu: 1024
+          Memory: 8192
+          Image: !Sub ${pECRRepoURL}/${pImageName}:${pImageTag}
+          Essential: true
+          PortMappings:
+            - ContainerPort: 3000
+          Environment:
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: INFERENCE_PROFILE_ARN
+              Value: !Ref pBedrockApplicationInferenceProfile
+            - Name: STACK_USE_CASE
+              Value: restaurantOrderingUseCase
+            - Name: WS_URL
+              Value: !Ref pPublicWSSEndpoint
+            - Name: TABLE_NAME
+              Value: !Ref PrimaryDynamoDBTable
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              mode: non-blocking
+              max-buffer-size: 25m
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: containerlog
+  
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /fargatelogs
+
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+          Condition:
+            ArnLike:
+              aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
+            StringEquals:
+              aws:SourceAccount: !Ref AWS::AccountId
+        # - Effect: Allow
+        #   Action:
+        #     - ssm:GetParameters
+        #   Resource: 
+        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBHostParameter}"
+        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBUserParameter}"
+        #     - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DBPasswordParameter}"
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+ 
+  #creating an IAM role using IAM managed policy AmazonBedrockFullAccess with the service bedrock
+  AmazonBedrockFullAccess:
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Service: 
+                - "bedrock.amazonaws.com"
+              AWS:
+                - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: 
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+      RoleName: "AmazonBedrockFullAccess"
+
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+          Condition:
+            ArnLike:
+              aws:SourceArn: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:*
+            StringEquals:
+              aws:SourceAccount: !Ref AWS::AccountId
+      Path: /
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+  
+  ECSTaskPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "ECSTaskPolicy"
+      Roles:
+        - !Ref ECSTaskRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "dynamodb:*"
+            Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AWS::StackName}-ConversationRelayAppDatabase"
+
+  # Bedrock CloudWatch metrics for performance and usage monitoring using automated dashboards:
+  # https://aws.amazon.com/blogs/machine-learning/improve-visibility-into-amazon-bedrock-usage-and-performance-with-amazon-cloudwatch/
+
+  rBedrockLoggingKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for Bedrock logging
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Ref AWS::AccountId
+            Action: kms:*
+            Resource: '*'
+          - Effect: Allow
+            Principal:
+              Service: logs.amazonaws.com
+            Action:
+              - kms:Decrypt*
+              - kms:Describe*
+              - kms:Encrypt*
+              - kms:GenerateDataKey*
+              - kms:ReEncrypt*
+            Resource: '*'
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${AWS::StackName}-ConversationRelayBedrockLogGroup
+
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: kms:GenerateDataKey*
+            Resource: '*'
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:*
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+    UpdateReplacePolicy: Delete 
+    DeletionPolicy: Delete 
+
+  rBedrockLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "${AWS::StackName}-ConversationRelayBedrockLogGroup" 
+      RetentionInDays: 30
+    UpdateReplacePolicy: Delete 
+    DeletionPolicy: Delete
+
+  rBedrockServiceRoleForLogging:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+          - Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:*
+            Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+        Version: '2012-10-17'
+
+  rBedrockServiceRoleForLoggingDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource: !GetAtt rBedrockLogGroup.Arn
+          - Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey*
+              - kms:ReEncrypt*
+            Effect: Allow
+            Resource: !GetAtt rBedrockLoggingKey.Arn
+        Version: '2012-10-17'
+      PolicyName: BedrockLoggingRoleDefaultPolicy
+      Roles:
+        - !Ref rBedrockServiceRoleForLogging
+
+Outputs:
+  DynamoDBTable:
+    Description: DynamoDB Table Name
+    Value: !Ref PrimaryDynamoDBTable
+  ClusterName:
+    Description: Twilio ConversationRelay Service 
+    Value: !Ref Cluster
+  ServiceName:
+    Description: Amazon ECS Service Name
+    Value: !GetAtt Service.Name
+  PublicLBFQDN:
+    Value: !Join
+      - ''
+      - - https://
+        - !GetAtt PublicLoadBalancer.DNSName
+        - /
+  PublicLBWSURL:
+    Value: !Join
+      - ''
+      - - wss://
+        - !GetAtt PublicLoadBalancer.DNSName
+  VPCID:
+    Value: !Ref VPC
+  PublicSubnet1:
+    Value: !Ref PublicSubnet1
+  PublicSubnet2:
+    Value: !Ref PublicSubnet2
+  PrivateSubnet1:
+    Value: !Ref PrivateSubnet1
+  PrivateSubnet2:
+    Value: !Ref PrivateSubnet2
+  LB:
+    Value: !Ref PublicLBTargetGroup
+  SG:
+    Value: !Ref PublicHTTPSecurityGroup
