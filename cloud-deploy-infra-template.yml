@@ -4,12 +4,12 @@ Description: AWS Fargate with VPC, ALB, ECR, Bedrock, PrivateLink, and Twilio Co
 Parameters:
 
   ECRRepoURL:
-    Description: The URL of the ECR repository
+    Description: The URL of the ECR repository where the Docker image is stored
     Type: String
     Default: 703671914627.dkr.ecr.us-east-1.amazonaws.com
 
-  ECRImageName:
-    Description: The name of the ECR image for the service deployment  
+  pImageName:
+    Description: Name of the ECR image for the service deployment
     Type: String
     Default: twilio-conversation-relay-bedrock-services
 
@@ -19,7 +19,7 @@ Parameters:
     Default: latest
 
   pCustomerDomainCertificateArn:
-    Description: The ARN of the certificate for the custom domain
+    Description: The ARN of the certificate for the custom domain that is ALIASEd to the load balancer in this template
     Type: String
     Default: arn:aws:acm:us-east-1:971461683291:certificate/9412e7f0-51c5-4573-bceb-f95c4b25f4b1
 
@@ -27,11 +27,6 @@ Parameters:
     Description: Inference profile used for Bedrock calls
     Type: String
     Default: us.amazon.nova-micro-v1:0
-
-  pImageName:
-    Description: Name of the ECR image for the service deployment
-    Type: String
-    Default: twilio-conversation-relay-bedrock-services
 
   pPublicWSSEndpoint:
     Description: Name of the ECR image for the service deployment
