@@ -13,7 +13,7 @@ Parameters:
     Type: String
     Default: twilio-conversation-relay-bedrock-services
 
-  ImageTag:
+  pImageTag:
     Description: The ECR image tag - corresponds to the version of the image     
     Type: String
     Default: latest
@@ -489,7 +489,7 @@ Resources:
         - Name: twilio-conversation-relay-bedrock-service
           Cpu: 1024
           Memory: 8192
-          Image: !Sub ${pERCRepoURL}/${pImageName}:latest
+          Image: !Sub ${pECRRepoURL}/${pImageName}:${pImageTag}
           Essential: true
           PortMappings:
             - ContainerPort: 3000
