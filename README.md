@@ -44,19 +44,21 @@ Make sure that your Twilio phone number webhook endpoint is set to the HTTP addr
 
 ## Cloud Deployment
 
-### DEPLOY TEMPLATE
+### Deploy cloud resources to AWS
+
 `sam build --template-file cloud-deploy-infra-template.yml`
 `sam deploy --guided --stack-name CR-AWS-BEDROCK --template cloud-deploy-infra-template.yml --capabilities CAPABILITY_NAMED_IAM --profile ConversationRelayPrgDanBartlett `
 
-* The first time you deploy, add `--guided` (`sam deploy --guided --stack-name...`) to the above command to generate a configuration file. All subsequent commands do not need the --guided.
+The first time you deploy, add `--guided` (`sam deploy --guided --stack-name...`) to the above command to generate a configuration file. All subsequent commands do not need the --guided.
 
-### LINK AWS REST API ENDPOINT TO TWILIO
+### Configure your Twilio voice webhook endpoint
+
 Take Output from the stack called "TwimlAPI" and assign it to the Webhook for Voice handler for their desired phone number.
 
-### DATA LOADING
+### Load the application prompts and user profiles into Dynamo DB
+
 `aws dynamodb put-item --table-name CR-AWS-BEDROCK-ConversationRelayAppDatabase --item "$(node ./configuration/dynamo-loaders/restaurantOrderingUseCase.js | cat)"`
 
-### ADD A PROFILE
 First, edit this file [ ./configuration/dynamo-loaders/user-profile-example.json ] with your information. The primary key is the phone number in E164 format! 
 
 `aws dynamodb put-item --table-name CR-AWS-BEDROCK-ConversationRelayAppDatabase --item "$(node ./configuration/user-profile.js | cat)"`
