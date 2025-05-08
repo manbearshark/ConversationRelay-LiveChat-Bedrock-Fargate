@@ -12,8 +12,6 @@ const port = 3000;
 const wsServer = new WebSocketServer({ noServer: true });
 const server = app.listen(port, () => {
   console.log(`App is ready.`);  
-  console.debug(`AWS_PROFILE => ${process.env.AWS_PROFILE}`);
-  console.debug(`WS_DOMAIN_NAME => ${process.env.WS_DOMAIN_NAME}`);
   console.debug(`TABLE_NAME => ${process.env.TABLE_NAME}`);
   console.debug(`AWS_REGION => ${process.env.AWS_REGION}`);  
   console.debug(`STACK_USE_CASE => ${process.env.STACK_USE_CASE}`);

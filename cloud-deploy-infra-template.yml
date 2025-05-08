@@ -496,7 +496,7 @@ Resources:
           Environment:
             - Name: AWS_REGION
               Value: !Ref AWS::Region
-            - Name: INFERENCE_PROFILE_ARN
+            - Name: MODEL_IDENTIFIER
               Value: !Ref pBedrockApplicationInferenceProfile
             - Name: STACK_USE_CASE
               Value: restaurantOrderingUseCase
