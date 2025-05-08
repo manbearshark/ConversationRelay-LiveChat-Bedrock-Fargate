@@ -28,11 +28,10 @@ sam deploy --stack-name CR-local --template-file local-dev-cloud-infra-template.
 Modify the docker-compose.yml file on the following lines:
 
 ```
-- INFERENCE_PROFILE_ARN=us.anthropic.claude-3-5-sonnet-20240620-v1:0 # This can be an ARN or a cross-region profie
+- INFERENCE_PROFILE_ARN=us.anthropic.claude-3-5-sonnet-20240620-v1:0
 - TABLE_NAME=CR-local-ConversationRelayAppDatabase
 - AWS_REGION=us-east-1
 - STACK_USE_CASE=restaurantOrderingUseCase
-# THERE MUST BE A SLASH AT THE END OF THE URL - TWILIO DOES NOT LIKE IT WITHOUT IT
 - WS_URL=wss://<YOUR NGROK ENDPOINT>/
 ```
 
@@ -60,7 +59,7 @@ ECR_TAG=latest
 
 `sam build --template-file cloud-deploy-infra-template.yml`
 
-`sam deploy --guided --stack-name CR-AWS-BEDROCK --template cloud-deploy-infra-template.yml --capabilities CAPABILITY_NAMED_IAM --profile ConversationRelayPrgDanBartlett `
+`sam deploy --guided --stack-name CR-AWS-BEDROCK --template cloud-deploy-infra-template.yml --capabilities CAPABILITY_NAMED_IAM`
 
 The first time you deploy, add `--guided` (`sam deploy --guided --stack-name...`) to the above command to generate a configuration file. All subsequent commands do not need the --guided.
 
