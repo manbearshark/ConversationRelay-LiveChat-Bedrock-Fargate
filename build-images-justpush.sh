@@ -1,2 +1,0 @@
-aws ecr get-login-password --region us-east-1 --profile ConversationRelayPrgDanBartlett | docker login --username AWS --password-stdin 703671914627.dkr.ecr.us-east-1.amazonaws.com
-docker push 703671914627.dkr.ecr.us-east-1.amazonaws.com/bedrock-cr:latest

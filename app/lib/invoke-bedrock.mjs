@@ -16,14 +16,15 @@ export async function invokeBedrock(promptObj) {
     try {
         //console.info("in [ invokeBedrock ] and promptObj ==> \n" + JSON.stringify(promptObj, null, 2));     
 
-        // Use the Bedrock ConverseStreamCommand to call the LLM
-        // via the Inference Profile set up in the ENV
-        const modelInferenceProfile = process.env.INFERENCE_PROFILE_ARN;
+        // Use the Bedrock ConverseStreamCommand to call the LLM        
+
+        let tools = (promptObj.callConnection.tools) ? JSON.parse(promptObj.callConnection.tools) : [];
+
         const bedrockInput = {
-            modelId: modelInferenceProfile,
+            modelId: promptObj.callConnection.llmModel,
             messages: promptObj.messages,
             system: promptObj.callConnection.systemPrompt,
-            toolConfig: { tools: JSON.parse(promptObj.callConnection.tools) },
+            toolConfig: { tools: tools },
             inferenceConfig: {
                 maxTokens: 1600,
                 temperature: 0.3,
@@ -34,12 +35,6 @@ export async function invokeBedrock(promptObj) {
         
         //console.info("in [ invokeBedrock ] and bedrockInput ==> \n" + JSON.stringify(bedrockInput, null, 2));  
 
-        // This is not a tool call completion so provide the 
-        // tools available for the LLM to call
-        /*if (!promptObj.toolCallCompletion) {
-            bedrockInput.toolConfig.tools = JSON.parse(promptObj.callConnection.tools);               
-        } */   
-
         // Instantiate the object that LLM returns.
         let returnObj = {};
         returnObj.role = "assistant";
@@ -47,13 +42,7 @@ export async function invokeBedrock(promptObj) {
         returnObj.tool_calls = {};    
         returnObj.last = true;
         returnObj.finish_reason = "";
-        
-        let llmTextResponse = "";
-            
-        // Declare WebSocket client to return text to Twilio
-        // Client is instantiated in parent lambda.
-        const ws_client = promptObj.socket;
-
+                    
         // call Bedrock and wait for response...
         const bedrockCommand = new ConverseStreamCommand(bedrockInput);
 
@@ -67,10 +56,8 @@ export async function invokeBedrock(promptObj) {
         contentBlocks.push({ responseType: "", content: "" }); // There will be at least one content block
 
         //console.info("in [ invokeBedrock ] and instantiated contentBlocks ==> \n" + JSON.stringify(contentBlocks, null, 2));
-        
-        let lastContentBlockIndex = 0;
 
-        // Iterate over stream
+        // Iterate over stream returned from Bedrock
         for await (const chunk of bedrockResponse.stream) {
             try {    
                 //console.info("chunk => \n" + JSON.stringify(chunk, null, 2)); 
@@ -96,9 +83,7 @@ export async function invokeBedrock(promptObj) {
                         // Send text (current chunk content) back to WebSocket & Twilio for TTS
                         // Text is streamed back immediately to minimize latency
                         console.info("Sending text to WebSocket ==> ", JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false}));
-                        ws_client.send(JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false}));
-                        //await ws_client.send(Buffer.from(JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false})));                 
-
+                        promptObj.socket.send(JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false}));
 
                     } else if (chunk.contentBlockDelta.delta?.toolUse) {
 
@@ -114,7 +99,7 @@ export async function invokeBedrock(promptObj) {
 
                         // Current text turn has ended
                         console.info("Sending text to WebSocket ==> ");
-                        ws_client.send(Buffer.from(JSON.stringify({type:"text", token:"", last:true})));                 
+                        promptObj.socket.send(Buffer.from(JSON.stringify({type:"text", token:"", last:true})));                 
                     }
                     
                 } else if (chunk.messageStop) {            
@@ -165,6 +150,7 @@ export async function invokeBedrock(promptObj) {
         //console.info("In Handle Prompt about to return...\n" + JSON.stringify(returnObj, null, 2)); 
 
         return returnObj;
+
     } catch (error) {
         console.error("Error in invokeBedrock: ", error);
         if(error.name === 'ThrottlingException') {

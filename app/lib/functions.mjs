@@ -85,19 +85,19 @@ const FunctionHandler = {
     CheckRestaurantDeliveryTime        
 };
 
-export async function makeFunctionCalls(ddbDocClient, tool_calls_object, connectionId, callConnection) {
+export async function makeFunctionCalls(ddbDocClient, tool_calls_object, callSid, callConnection) {
 
   try {
     const tool_calls = Object.values(tool_calls_object).map(tool => {                
         return {             
             ...tool, 
-            ws_connectionId: connectionId, 
-            userContext: callConnection.Item.userContext,
+            callSid: callSid, 
+            userContext: callConnection.userContext,
             call_details: {
-                to_phone: callConnection.Item.To,
-                from_phone: callConnection.Item.From,
-                twilio_call_sid: callConnection.Item.CallSid,
-                twilio_account_sid: callConnection.Item.AccountSid                            
+                to_phone: callConnection.To,
+                from_phone: callConnection.From,
+                twilio_call_sid: callConnection.CallSid,
+                twilio_account_sid: callConnection.AccountSid                            
             }
         };                                                
     });          
@@ -146,7 +146,7 @@ async function saveToolResult(ddbDocClient, tool, toolResult) {
         new PutCommand({
             TableName: process.env.TABLE_NAME,
             Item: {
-                pk: tool.ws_connectionId,
+                pk: tool.callSid,
                 sk: `chat::${Date.now().toString()}${tool.toolUseId.slice(-5)}`, // add last 5 chars of tool_call_id.slice(-5) ensure unique
                 chat: finalToolResult,
                 expireAt:  parseInt((Date.now() / 1000) + 86400)  // Expire "demo" session data automatically (can be removed)
@@ -177,15 +177,17 @@ export async function PlaceOrderFunction(ddbDocClient, tool) {
   // Create an order id based on the websocket connection id
   // so that this order can be easily pulled up later in this session
   // using "begins_with".
-  let order_sk = `restaurantOrder::${tool.ws_connectionId.slice(-4)}::${(Math.floor(Date.now() / 1000)).toString()}`;
+  let order_sk = `restaurantOrder::${tool.callSid.slice(-4)}::${(Math.floor(Date.now() / 1000)).toString()}`;
   console.log("order_sk ==> ", order_sk);
 
-  // Save new appointment linked to the user to the database              
+  let pk = (tool.userContext.pk) ? tool.userContext.pk : tool.callSid;
+  let sk1 = (tool.call_details) ? tool.call_details.to_phone : tool.callSid;
+  
   let confirmedOrder = {
-    pk: tool.userContext.pk,
+    pk: pk,
     sk: order_sk,
     pk1: 'restaurantOrder', 
-    sk1: tool.userContext.pk,
+    sk1: sk1,
     order: {
       order_items: input.current_order,
       order_type: input.order_type,
@@ -202,7 +204,7 @@ export async function PlaceOrderFunction(ddbDocClient, tool) {
 
   console.log(`[PlaceOrderFunction] Order successfully saved.`);
 
-  let toolResult = { message: `Your order has been accepted. Would you like a confirmation via SMS?`};
+  let toolResult = { message: `Your order has been accepted.`};
 
   await saveToolResult(ddbDocClient, tool, toolResult);
 

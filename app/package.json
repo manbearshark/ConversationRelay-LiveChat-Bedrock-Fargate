@@ -5,23 +5,20 @@
     "type": "module",
     "main": "index.js",
     "scripts": {
-      "start": "node index.js",
-      "test": "jest --forceExit --ci --reporters=default --reporters=jest-junit",
-      "lint": "eslint . --ext .js"
+        "start": "node index.js",
+        "test": "jest --forceExit --ci --reporters=default --reporters=jest-junit",
+        "lint": "eslint . --ext .js"
     },
-    "jest-junit": {
-    },
+    "jest-junit": {},
     "author": "George Wolf",
     "license": "MIT",
     "dependencies": {
-      "express": "^4.21.2",
-      "ws": "^8.0.0",
-      "@aws-sdk/client-bedrock-runtime": "^3.758.0",
-      "@aws-sdk/client-dynamodb": "^3.0.0",
-      "@aws-sdk/lib-dynamodb": "^3.0.0",
-      "@aws-sdk/client-bedrock-runtime": "^3.778.0",
-      "@aws-sdk/client-apigatewaymanagementapi": "^3.777.0"
-    },
-    "devDependencies": {
+        "@aws-sdk/client-apigatewaymanagementapi": "^3.777.0",
+        "@aws-sdk/client-bedrock-runtime": "^3.778.0",
+        "@aws-sdk/client-dynamodb": "^3.0.0",
+        "@aws-sdk/lib-dynamodb": "^3.0.0",
+        "dotenv": "^16.5.0",
+        "express": "^4.21.2",
+        "ws": "^8.0.0"
     }
-  }
+}
