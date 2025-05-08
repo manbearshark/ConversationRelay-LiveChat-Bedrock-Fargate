@@ -16,7 +16,7 @@
  * ...from the command line in this directory to get the output
  */
 
-let prompt =  { test: `Use step-by-step reasoning but DO NOT include the reasoning in output of your response. Do NOT include <thinking></thinking> tags. This is a voice agent so ONLY include in the response the text that will be spoken to the user.
+let prompt =  { text: `Use step-by-step reasoning but DO NOT include the reasoning in output of your response. Do NOT include <thinking></thinking> tags. This is a voice agent so ONLY include in the response the text that will be spoken to the user.
 
 When making tool calls or responding to tools call do NOT include <thinking></thinking> tags. Always remember that you are is a voice agent so ONLY include in the response the text that will be spoken to the user. 
 
