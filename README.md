@@ -44,12 +44,27 @@ Make sure that your Twilio phone number webhook endpoint is set to the HTTP addr
 
 ## Cloud Deployment
 
+### Deploy your Docker image to your ECR repository
+
+If you do not have an ECR repo, create one in the AWS region where you will deploy the app resources.  We use us-east-1 as a default here.
+
+If you are using our build script `build-images.sh` you will need to modify the environment variables at the start of the script to reflect your environment:
+
+```
+ECR_REPO=971461683291.dkr.ecr.us-east-1.amazonaws.com
+ECR_REPO_NAME=twilio-conversation-relay-bedrock-services
+ECR_TAG=latest
+```
+
 ### Deploy cloud resources to AWS
 
 `sam build --template-file cloud-deploy-infra-template.yml`
+
 `sam deploy --guided --stack-name CR-AWS-BEDROCK --template cloud-deploy-infra-template.yml --capabilities CAPABILITY_NAMED_IAM --profile ConversationRelayPrgDanBartlett `
 
 The first time you deploy, add `--guided` (`sam deploy --guided --stack-name...`) to the above command to generate a configuration file. All subsequent commands do not need the --guided.
+
+You will need to provide the repo name you set in the above steps, and you will need to have a certificate, and custom domain set up for the load balancer deployment for your API endpoints.
 
 ### Configure your Twilio voice webhook endpoint
 
