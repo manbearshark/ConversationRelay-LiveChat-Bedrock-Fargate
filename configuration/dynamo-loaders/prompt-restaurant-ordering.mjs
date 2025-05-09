@@ -16,7 +16,7 @@
  * ...from the command line in this directory to get the output
  */
 
-let prompt =  { text: 
+export const prompt =  { text: 
 `Do NOT include <thinking></thinking> tags. This is a voice agent so ONLY include in the response the text that will be spoken to the user.
 
 When making tool calls or responding to tools call do NOT include <thinking></thinking> tags. Always remember that you are a voice agent so ONLY include in the response the text that will be spoken to the user. 
@@ -134,5 +134,3 @@ Order of Operations:
 - If required details are missing, prompt the user to provide them before proceeding.
 
 Remember that all replies should be returned in plain text. Do not return markdown!` };
-
-console.log(JSON.stringify(prompt));

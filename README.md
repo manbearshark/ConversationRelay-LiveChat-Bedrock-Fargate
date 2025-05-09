@@ -71,7 +71,7 @@ Take Output from the stack called "TwimlAPI" and assign it to the Webhook for Vo
 
 ### Load the application prompts and user profiles into Dynamo DB
 
-`aws dynamodb put-item --table-name CR-AWS-BEDROCK-ConversationRelayAppDatabase --item "$(node ./configuration/dynamo-loaders/restaurantOrderingUseCase.js | cat)"`
+`aws dynamodb put-item --table-name CR-AWS-BEDROCK-ConversationRelayAppDatabase --item "$(node ./configuration/dynamo-loaders/restaurantOrderingUseCase.mjs | cat)"`
 
 First, edit this file [ ./configuration/dynamo-loaders/user-profile-example.json ] with your information. The primary key is the phone number in E164 format! 
 
