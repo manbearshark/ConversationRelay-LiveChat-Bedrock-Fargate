@@ -16,7 +16,7 @@ When developing locally, you will need to supply a WSS and HTTPS endpoint for Tw
 
 We recommend ngrok.  
 
-Start your ngrok enpoint and point it at your local machine on port 3000 (this is the default set for your local Docker image).
+Start your ngrok endpoint and point it at your local machine on port 3000 (this is the default set for your local Docker image).
 
 Copy the https and wss endpoints ngrok gives you.
 
@@ -28,7 +28,7 @@ sam deploy --stack-name CR-local --template-file local-dev-cloud-infra-template.
 Modify the docker-compose.yml file on the following lines:
 
 ```
-- INFERENCE_PROFILE_ARN=us.anthropic.claude-3-5-sonnet-20240620-v1:0
+- INFERENCE_PROFILE_ARN=us.amazon.nova-lite-v1:0\
 - TABLE_NAME=CR-local-ConversationRelayAppDatabase
 - AWS_REGION=us-east-1
 - STACK_USE_CASE=restaurantOrderingUseCase
