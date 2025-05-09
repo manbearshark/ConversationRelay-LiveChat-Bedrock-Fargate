@@ -26,7 +26,7 @@ Parameters:
   pBedrockApplicationInferenceProfile:
     Description: Bedrock inference profile used for LLM calls.  By default this is set to a Nova cross-region profile.
     Type: String
-    Default: us.amazon.nova-micro-v1:0
+    Default: us.amazon.nova-lite-v1:0
 
   pPublicWSSEndpoint:
     Description: Public WebSocket endpoint for the application - Twilio will call this endpoint to establish a voice connection. 

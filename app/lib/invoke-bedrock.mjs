@@ -33,7 +33,7 @@ export async function invokeBedrock(promptObj) {
             }
         };
         
-        //console.info("in [ invokeBedrock ] and bedrockInput ==> \n" + JSON.stringify(bedrockInput, null, 2));  
+        console.info("in [ invokeBedrock ] and bedrockInput ==> \n" + JSON.stringify(bedrockInput, null, 2));  
 
         // Instantiate the object that LLM returns.
         let returnObj = {};
