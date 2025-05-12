@@ -60,7 +60,7 @@ export async function invokeBedrock(promptObj) {
         // Iterate over stream returned from Bedrock
         for await (const chunk of bedrockResponse.stream) {
             try {    
-                //console.info("chunk => \n" + JSON.stringify(chunk, null, 2)); 
+                console.info("chunk => \n" + JSON.stringify(chunk, null, 2)); 
                 
                 if (chunk.contentBlockStart && chunk.contentBlockStart.contentBlockIndex !== 0) {
                     
@@ -127,9 +127,15 @@ export async function invokeBedrock(promptObj) {
 
             } else if (block.responseType == "toolUse") {
                 
+                //console.error("toolUse block => ", JSON.stringify(block, null, 2));
+                
+                let toolUseId = (block.toolUseId) ? block.toolUseId : "yyyyzzzz"; 
+                // Default value if not set (needed at time of writing to catch
+                // edge cases where toolUseId is not set)
+
                 let toolCall = {
                     toolUse: {
-                        toolUseId: block.toolUseId,
+                        toolUseId: toolUseId,
                         name: block.toolUseName,
                         // ConverseStream toolUse input needs to be decoded
                         // and is left as a string and then parsed by the tool

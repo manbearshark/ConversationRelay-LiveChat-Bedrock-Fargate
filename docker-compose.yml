@@ -11,6 +11,7 @@ services:
       - INFERENCE_PROFILE_ARN=us.anthropic.claude-3-5-sonnet-20240620-v1:0 # This can an ARN or a cross-region profie
       - TABLE_NAME=CR-local-ConversationRelayAppDatabase
       - AWS_REGION=us-east-1
+      # Change the default use case below
       - STACK_USE_CASE=restaurantOrderingUseCase
       # THERE MUST BE A SLASH AT THE END OF THE URL - TWILIO DOES NOT LIKE IT WITHOUT IT
       - WS_URL=wss://dfe9-75-85-156-88.ngrok-free.app/

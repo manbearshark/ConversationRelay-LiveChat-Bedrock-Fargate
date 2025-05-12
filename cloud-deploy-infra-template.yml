@@ -33,6 +33,12 @@ Parameters:
     Type: String
     Default: '' 
 
+  pStackUseCase:
+    Description: Default use case to use if it is not set in the user profile. This gets set when a session starts in setup-call-post-hander.mjs.
+    Type: String
+    Default: 'restaurantOrderingUseCase' 
+
+
 Globals:
   Function:
     Timeout: 3
@@ -499,7 +505,7 @@ Resources:
             - Name: MODEL_IDENTIFIER
               Value: !Ref pBedrockApplicationInferenceProfile
             - Name: STACK_USE_CASE
-              Value: restaurantOrderingUseCase
+              Value: !Ref pStackUseCase
             - Name: WS_URL
               Value: !Ref pPublicWSSEndpoint
             - Name: TABLE_NAME

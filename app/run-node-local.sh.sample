@@ -1,0 +1,9 @@
+export AWS_PROFILE=<YOUR-AWS-PROFILE>
+export WS_DOMAIN_NAME=<YOUR WebSocket DOMAIN NAME>
+export TABLE_NAME=CR-local-ConversationRelayAppDatabase
+export AWS_REGION=<YOUR AWS REGION -- us-east-1 preferred>
+export STACK_USE_CASE=restaurantOrderingUseCase
+export WS_URL=wss://dbartlett.ngrok.app/
+export MODEL_IDENTIFIER=us.amazon.nova-lite-v1:0
+export timeZone=America/Los_Angeles
+npm start

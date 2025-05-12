@@ -2,6 +2,12 @@
 .aws-sam
 samconfig.toml
 
+# Buld Scripts
+buld-images.sh
+run-node-local.sh
+
+user-profile.js
+
 # Logs
 logs
 *.log

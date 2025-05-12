@@ -1,4 +1,4 @@
-ECR_REPO=971461683291.dkr.ecr.us-east-1.amazonaws.com
+ECR_REPO=<--YOUR-ECR-REPO-URI (like xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com)-->
 ECR_REPO_NAME=twilio-conversation-relay-bedrock-services
 ECR_TAG=latest
 DEPLOYMENT_NAME=$ECR_REPO/$ECR_REPO_NAME:$ECR_TAG
