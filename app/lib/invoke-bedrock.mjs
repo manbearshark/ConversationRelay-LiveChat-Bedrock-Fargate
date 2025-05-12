@@ -57,6 +57,13 @@ export async function invokeBedrock(promptObj) {
 
         //console.info("in [ invokeBedrock ] and instantiated contentBlocks ==> \n" + JSON.stringify(contentBlocks, null, 2));
 
+        let inThinkingTag = false;
+        let inOutputTag = false;
+        let inTagParse = false;
+        let inEndTag = false;
+        let tag = "";
+
+
         // Iterate over stream returned from Bedrock
         for await (const chunk of bedrockResponse.stream) {
             try {    
@@ -76,14 +83,58 @@ export async function invokeBedrock(promptObj) {
                 } else if (chunk.contentBlockDelta) {
                     
                     if (chunk.contentBlockDelta.delta?.text) {
-                        
                         contentBlocks[chunk.contentBlockDelta.contentBlockIndex].responseType = "text";
-                        contentBlocks[chunk.contentBlockDelta.contentBlockIndex].content += chunk.contentBlockDelta.delta.text || '';
 
-                        // Send text (current chunk content) back to WebSocket & Twilio for TTS
-                        // Text is streamed back immediately to minimize latency
-                        console.info("Sending text to WebSocket ==> ", JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false}));
-                        promptObj.socket.send(JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false}));
+                        let text = '';
+                        if(chunk.contentBlockDelta.delta.text) {
+                            text = chunk.contentBlockDelta.delta.text;
+                        } 
+                     
+                        if(text.includes(">") && inEndTag) {
+                            inEndTag = false;
+                            inTagParse = false;
+                            inThinkingTag = false;
+                            inOutputTag = false;
+                            text.replace(">", "");
+                        }
+
+                        if(text.includes(">") && inTagParse) {
+                            //text = text.replace(">", "");
+                            inTagParse = false; 
+                            text.replace(">", "");
+                        }
+                        
+                        // Check for <thinking> and <output> tags
+                        if(text.includes("<") || inTagParse) {
+                            inTagParse = true;
+                            text.replace("<", "");
+                            if(text.includes("thinking") || text.includes("thinking>")) {
+                                inThinkingTag = true;
+                                inOutputTag = false;
+                                text.replace("thinking", "");
+                                text.replace(">", "");
+                            } else if(text.includes("output") || text.includes("output>")) {
+                                inOutputTag = true;
+                                inThinkingTag = false;
+                                text.replace("output", "");
+                                text.replace(">", "");
+                            } else if(text.includes("</")) {
+                                inEndTag = true;
+                                text.replace("</", "");
+                            }
+                        }
+
+                        if(inThinkingTag) {
+                            console.log("in <thinking> tag ==> " + text);
+                        } else if(inOutputTag) {
+                            //console.info("Sending text to WebSocket ==> ", JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false}));
+                            // Send text (current chunk content) back to WebSocket & Twilio for TTS
+                            // Text is streamed back immediately to minimize latency
+                            contentBlocks[chunk.contentBlockDelta.contentBlockIndex].content += text;
+                            promptObj.socket.send(JSON.stringify({type:"text", token:text, last:false}));
+                            //promptObj.socket.send(JSON.stringify({type:"text", token:chunk.contentBlockDelta.delta.text, last:false}));
+                            console.log("in <output> tag ==> " + text);
+                        }
 
                     } else if (chunk.contentBlockDelta.delta?.toolUse) {
 
