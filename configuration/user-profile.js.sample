@@ -1,6 +1,6 @@
 profile = {
     "pk": {
-        "S":" +18083888200"
+        "S":"+<YOUR_E164_PHONE_NUMBER>"
     },
     "sk": {
         "S": "profile"
@@ -9,19 +9,19 @@ profile = {
         "S": "email@twilio.com"
     },
     "firstName": {
-        "S": "George"
+        "S": "<YOUR_FIRST_NAME>"
     },
     "lastName": {
-        "S": "Wolf"
+        "S": "<YOUR_LAST_NAME>"
     },
     "pk1": {
         "S": "profile"
     },
     "sk1": {
-        "S": "+18083888200"
+        "S":"+<YOUR_E164_PHONE_NUMBER>"
     },
     "useCase": {
-        "S": "restaurantOrderingUseCase"
+        "S": "<DEFAULT USE CASE restaurantOrderingUseCase | albertEinsteinUseCase | your-own-use-case>"
     }
 };
 

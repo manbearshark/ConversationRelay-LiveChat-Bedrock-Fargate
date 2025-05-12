@@ -1,9 +1,0 @@
-export AWS_PROFILE=ConversationRelayPrgDanBartlett
-export WS_DOMAIN_NAME=dbartlett.ngrok.app
-export TABLE_NAME=CR-local-ConversationRelayAppDatabase
-export AWS_REGION=us-east-1
-export STACK_USE_CASE=restaurantOrderingUseCase
-export WS_URL=wss://dbartlett.ngrok.app/
-export MODEL_IDENTIFIER=us.amazon.nova-micro-v1:0
-export timeZone=America/Los_Angeles
-npm start

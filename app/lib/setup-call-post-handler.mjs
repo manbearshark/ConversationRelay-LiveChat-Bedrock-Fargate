@@ -4,12 +4,14 @@ const dynClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 const ddbDocClient = DynamoDBDocumentClient.from(dynClient);
 
 export const setupCallPostHandler = async (twilioBody) => {
+
     
+    console.info("twilioBody.From ==>\n" + twilioBody.From);    
     /**
      * First, use the FROM phone (caller) to get the user profile. This
      * allows you to personalize the experience.
      */    
-    let userContext = { pk:twilioBody.From }; // Default user with pk as the from phone number
+    let userContext = {}; // Default user with pk as the from phone number
     try {
         let user = await ddbDocClient.send( new GetCommand( { TableName: process.env.TABLE_NAME, Key: { pk: twilioBody.From, sk: "profile" } } ));
         if (user.Item) {
@@ -20,6 +22,7 @@ export const setupCallPostHandler = async (twilioBody) => {
     }
     console.info("userContext ==>\n" + JSON.stringify(userContext, null, 2));    
 
+    console.info("userContext.useCase ==>\n" + userContext.useCase);    
     /**
      * Use the use case title from the user context if present or default to 
      * use case set in the environment variable.
