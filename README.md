@@ -1,4 +1,4 @@
-# An Architecture for building production Voice AI Applications using Twilio ConversationRelay and AWS Bedrock and AWS Fargate
+# Framework for Voice AI Applications using Twilio ConversationRelay and Amazon Bedrock and Fargate
 
 Building Voice AI Agents requires implementing several technologies. In this repo, we present an architecture for building Voice AI Agents that could be the foundation for production applications. The architecture leverages key components of the Twilio and AWS platforms.
 
