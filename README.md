@@ -1,6 +1,10 @@
-# ConversationRelay Architecture for Voice AI Applications Built on AWS using Fargate and Bedrock
+# An Architecture for building production Voice AI Applications using Twilio ConversationRelay and AWS Bedrock and AWS Fargate
 
-![](./diagrams/application-logical-flow.png)
+Building Voice AI Agents requires implementing several technologies. In this repo, we present an architecture for building Voice AI Agents that could be the foundation for production applications. The architecture leverages key components of the Twilio and AWS platforms.
+
+The diagram below give the high-level overview. Voice calls can enter the Twilio platform via traditional PSTN (telephone numbers), SIP, or WebRTC, and via Twilio Programmable Voice can be connected to your application powered by AWS ECS and Fargate. Speech-to-text and text-to-speech are handled by Twilio ConversationRelay while LLM calling is done through AWS Bedrock. Using these managed services leaves challenging components to Twilio and AWS thus allowing you to focus on key differentiating components like User Experience, Business Logic, Prompt Engineering, and Tool Calling.
+
+![](./diagrams/cr-bedrock-important-architecture.png)
 
 This project can be used in three modes:
 
@@ -10,7 +14,7 @@ This project can be used in three modes:
 
 ## Local Deployment
 
-The local Docker instance will still need to call out to DynamoDB and Bedrock in the cloud.
+For this application, state is managed in DynamoDB. The local Docker instance will still need to call out to DynamoDB and Bedrock in the cloud.
 
 When developing locally, you will need to supply a WSS and HTTPS endpoint for Twilio to reach your local machine.
 
@@ -20,10 +24,12 @@ Start your ngrok endpoint and point it at your local machine on port 3000 (this 
 
 Copy the https and wss endpoints ngrok gives you.
 
-Deploy Bedrock CloudWatch logs and cloud DynamoDB table for the application:
+Deploy Bedrock CloudWatch logs and cloud DynamoDB table for the application using these two commands below:
 
+```
 sam build --template-file local-dev-cloud-infra-template.yml
 sam deploy --stack-name CR-local --template-file local-dev-cloud-infra-template.yml --guided
+```
 
 Modify the docker-compose.yml file on the following lines:
 
@@ -45,17 +51,19 @@ Make sure that your Twilio phone number webhook endpoint is set to the HTTP addr
 
 ### Deploy your Docker image to your ECR repository
 
-If you do not have an ECR repo, create one in the AWS region where you will deploy the app resources.  We use us-east-1 as a default here.
+If you do not have an ECR repo, create one in the AWS region where you will deploy the app resources.  We use `us-east-1` as a default here and that is the best choice for latency.
 
 If you are using our build script `build-images.sh` you will need to modify the environment variables at the start of the script to reflect your environment:
 
 ```
-ECR_REPO=971461683291.dkr.ecr.us-east-1.amazonaws.com
+ECR_REPO=<--URL-to-your-ECR repo (like "123456789.dkr.ecr.us-east-1.amazonaws.com") -->
 ECR_REPO_NAME=twilio-conversation-relay-bedrock-services
 ECR_TAG=latest
 ```
 
 ### Deploy cloud resources to AWS
+
+Deploy the AWS resources to your AWS account using the two commands below:
 
 `sam build --template-file cloud-deploy-infra-template.yml`
 
@@ -67,9 +75,11 @@ You will need to provide the repo name you set in the above steps, and you will 
 
 ### Configure your Twilio voice webhook endpoint
 
-Take Output from the stack called "TwimlAPI" and assign it to the Webhook for Voice handler for their desired phone number.
+Take Output from the stack called "TwimlAPI" and assign it to the Webhook for Voice handler for their desired phone number. The voice handler will direct any inbound call to first call your application to return the TwiML needed to spin up a ConversationRelay session. The TwiML returned can be dynamically generated for each session allowing you to customize every user experience. The TwiML starts the ConversationRelay session which connects the call to your application via websocket connection enabling speech-to-text to connect to your application and LLM and stream back text to be converted to speech for the caller.
 
-### Load the application prompts and user profiles into Dynamo DB
+### Load the application prompts and user profiles into DynamoDB
+
+To allow you to quickly experiment with use cases, all configuration details are stored as items in the DynamoDB table. The commands below allow you to upload some default/sample "use cases" but you can easily modify these to your own needs. Note that the prompt, LLM Model, and configuration details for ConversationRelay (SST & TTS provider, language, voice) are all available to be set per use case and then modified dynamically per session.
 
 `aws dynamodb put-item --table-name CR-AWS-BEDROCK-ConversationRelayAppDatabase --item "$(node ./configuration/dynamo-loaders/restaurantOrderingUseCase.mjs | cat)"`
 
